@@ -7,6 +7,8 @@
 
   let VIDEO_DATA = [];
   let activeFilter = 'all';
+  let activeTypeFilter = 'all';
+  let activeGroupMode = 'type'; // 'type' | 'franchise' | 'none'
   let searchQuery = '';
   let selectedVideo = null;
 
@@ -23,7 +25,9 @@
   const cardsContainer = document.getElementById('cards-container');
   const searchInput = document.getElementById('search-input');
   const clearSearchBtn = document.getElementById('clear-search');
-  const filterChips = document.querySelectorAll('.filter-chip');
+  const filterChips = document.querySelectorAll('#filter-bar .filter-chip');
+  const typeFilterChips = document.querySelectorAll('#type-filter-bar .filter-chip');
+  const modeButtons = document.querySelectorAll('.mode-btn');
   const resultsCount = document.getElementById('results-count');
 
   // Modal Elements
@@ -189,33 +193,43 @@
 
   // ── Filter Counts ──
   function updateFilterCounts() {
-    const counts = {
-      all: VIDEO_DATA.length,
-      quintuplets: VIDEO_DATA.filter((v) => v.franchise === 'quintuplets').length,
-      'demon-slayer': VIDEO_DATA.filter((v) => v.franchise === 'demon-slayer').length,
-      'chainsaw-man': VIDEO_DATA.filter((v) => v.franchise === 'chainsaw-man').length,
-      're-zero': VIDEO_DATA.filter((v) => v.franchise === 're-zero').length,
-      horimiya: VIDEO_DATA.filter((v) => v.franchise === 'horimiya').length,
-      '100-kanojo': VIDEO_DATA.filter((v) => v.franchise === '100-kanojo').length,
-      overflow: VIDEO_DATA.filter((v) => v.franchise === 'overflow').length,
-      roshidere: VIDEO_DATA.filter((v) => v.franchise === 'roshidere').length,
-      'tomo-chan': VIDEO_DATA.filter((v) => v.franchise === 'tomo-chan').length,
-      curated: VIDEO_DATA.filter((v) => v.franchise === 'curated').length
-    };
+    const franchiseKeys = [
+      'all', 'quintuplets', 'demon-slayer', 'chainsaw-man', 're-zero',
+      'horimiya', '100-kanojo', 'overflow', 'roshidere', 'tomo-chan',
+      'frieren', 'jujutsu-kaisen', 'fruit-of-evolution', 'dress-up-darling', 'curated'
+    ];
 
-    Object.keys(counts).forEach((key) => {
+    franchiseKeys.forEach((key) => {
+      const count = key === 'all'
+        ? VIDEO_DATA.length
+        : VIDEO_DATA.filter((v) => v.franchise === key).length;
       const el = document.getElementById(`count-${key}`);
-      if (el) el.textContent = counts[key];
+      if (el) el.textContent = count;
+    });
+
+    const typeKeys = [
+      'all', '3d-animation', '2d-anime', 'compilation', 'ensemble', 'solo', 'portal'
+    ];
+
+    typeKeys.forEach((key) => {
+      const count = key === 'all'
+        ? VIDEO_DATA.length
+        : VIDEO_DATA.filter((v) => v.type === key).length;
+      const el = document.getElementById(`type-count-${key}`);
+      if (el) el.textContent = count;
     });
   }
 
   // ── Filter & Search Logic ──
   function getFilteredVideos() {
     return VIDEO_DATA.filter((v) => {
-      const matchesFilter =
+      const matchesFranchise =
         activeFilter === 'all' || v.franchise === activeFilter;
+      if (!matchesFranchise) return false;
 
-      if (!matchesFilter) return false;
+      const matchesType =
+        activeTypeFilter === 'all' || v.type === activeTypeFilter;
+      if (!matchesType) return false;
 
       if (!searchQuery) return true;
 
@@ -223,22 +237,77 @@
       const titleMatch = v.title.toLowerCase().includes(q);
       const fullTitleMatch = v.fullTitle.toLowerCase().includes(q);
       const franchiseMatch = v.franchiseName.toLowerCase().includes(q);
+      const typeMatch = (v.typeName || '').toLowerCase().includes(q);
       const tagMatch = v.userTag.toLowerCase().includes(q);
       const charMatch = v.characters.some((c) => c.toLowerCase().includes(q));
       const badgeMatch = v.badges.some((b) => b.toLowerCase().includes(q));
 
-      return titleMatch || fullTitleMatch || franchiseMatch || tagMatch || charMatch || badgeMatch;
+      return titleMatch || fullTitleMatch || franchiseMatch || typeMatch || tagMatch || charMatch || badgeMatch;
     });
   }
 
-  // ── Render Cards ──
+  function renderCardHtml(item) {
+    const badgesHtml = item.badges
+      .map((b) => `<span class="badge">${b}</span>`)
+      .join('');
+
+    return `
+    <article class="video-card" data-id="${item.id}">
+      <div class="card-header">
+        <div class="card-topline">
+          <span class="card-franchise">${item.franchiseName}</span>
+          <span class="badge" style="background:var(--terracotta);color:#fff;font-weight:600;">${item.typeName || 'Feature'}</span>
+        </div>
+        <h2 class="card-title">${item.title}</h2>
+        <p class="card-meta">
+          <strong>${item.characters.join(', ')}</strong> • <em>${item.userTag}</em>
+        </p>
+        <div class="card-keys-row">
+          <span class="key-badge" data-key="${item.layer1Key}" title="Click to copy Layer 1 Key">
+            <strong>L1:</strong> ${item.layer1Key}
+          </span>
+          <span class="key-badge" data-key="${item.layer2Key}" title="Click to copy Layer 2 Key (tqq)">
+            <strong>L2:</strong> ${item.layer2Key}
+          </span>
+        </div>
+        <div class="badges-row">
+          ${badgesHtml}
+        </div>
+      </div>
+
+      <div class="card-actions">
+        <button class="btn-incognito" data-id="${item.id}" title="Copy direct link for Private/Incognito window">
+          <span>⚡</span> Copy Direct
+        </button>
+        <button class="btn-cloak" data-id="${item.id}" title="Copy 2-Layer Cloaked URL">
+          <span>🔒</span> Copy Cloaked
+        </button>
+        <div class="card-sub-acts">
+          <button class="act" data-action="details" data-id="${item.id}">Details</button>
+          <a href="${item.cloakUrl}" target="_blank" rel="noreferrer noopener" class="act act-accent" title="Open 2-Layer Cloak decryptor">Cloak ↗</a>
+        </div>
+      </div>
+    </article>
+    `;
+  }
+
+  const TYPE_META = {
+    '3d-animation': { name: '3D Animation', icon: '🎬' },
+    '2d-anime': { name: '2D Anime', icon: '🎨' },
+    'compilation': { name: 'Compilations & Anthologies', icon: '📚' },
+    'ensemble': { name: 'Duos & Ensembles', icon: '👥' },
+    'solo': { name: 'Solo Features', icon: '⭐' },
+    'portal': { name: 'Archive Portals', icon: '🏛️' }
+  };
+
+  // ── Render Cards & Sub-Sections ──
   function render() {
     const list = getFilteredVideos();
     resultsCount.textContent = `${list.length} ${list.length === 1 ? 'title' : 'titles'} found`;
 
     if (list.length === 0) {
       cardsContainer.innerHTML = `
-        <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: var(--muted);">
+        <div style="text-align: center; padding: 48px 16px; color: var(--muted);">
           <p style="font-size: 16px; margin-bottom: 8px;">No matching entries found.</p>
           <button id="reset-filter-btn" class="act act-strong">Clear search & filters</button>
         </div>
@@ -250,6 +319,7 @@
           searchInput.value = '';
           clearSearchBtn.hidden = true;
           activeFilter = 'all';
+          activeTypeFilter = 'all';
           updateFilterChipUI();
           render();
         });
@@ -257,52 +327,61 @@
       return;
     }
 
-    cardsContainer.innerHTML = list
-      .map((item) => {
-        const badgesHtml = item.badges
-          .map((b) => `<span class="badge">${b}</span>`)
-          .join('');
-
-        return `
-        <article class="video-card" data-id="${item.id}">
-          <div class="card-header">
-            <div class="card-topline">
-              <span class="card-franchise">${item.franchiseName}</span>
-              <span class="badge">${item.characters[0] || 'Curated'}</span>
+    if (activeGroupMode === 'type') {
+      const typeOrder = ['3d-animation', '2d-anime', 'compilation', 'ensemble', 'solo', 'portal'];
+      let html = '';
+      typeOrder.forEach((typeKey) => {
+        const groupItems = list.filter((v) => v.type === typeKey);
+        if (groupItems.length === 0) return;
+        const meta = TYPE_META[typeKey] || { name: typeKey, icon: '📁' };
+        html += `
+          <section class="section-group">
+            <div class="section-head">
+              <div class="section-head-left">
+                <span class="section-icon">${meta.icon}</span>
+                <h3 class="section-title">${meta.name}</h3>
+              </div>
+              <span class="section-count-badge">${groupItems.length} ${groupItems.length === 1 ? 'title' : 'titles'}</span>
             </div>
-            <h2 class="card-title">${item.title}</h2>
-            <p class="card-meta">
-              <strong>${item.characters.join(', ')}</strong> • <em>${item.userTag}</em>
-            </p>
-            <div class="card-keys-row">
-              <span class="key-badge" data-key="${item.layer1Key}" title="Click to copy Layer 1 Key">
-                <strong>L1:</strong> ${item.layer1Key}
-              </span>
-              <span class="key-badge" data-key="${item.layer2Key}" title="Click to copy Layer 2 Key (tqq)">
-                <strong>L2:</strong> ${item.layer2Key}
-              </span>
+            <div class="cards-grid">
+              ${groupItems.map(renderCardHtml).join('')}
             </div>
-            <div class="badges-row">
-              ${badgesHtml}
+          </section>
+        `;
+      });
+      cardsContainer.innerHTML = html;
+    } else if (activeGroupMode === 'franchise') {
+      const groups = {};
+      list.forEach((v) => {
+        if (!groups[v.franchiseName]) groups[v.franchiseName] = [];
+        groups[v.franchiseName].push(v);
+      });
+      let html = '';
+      Object.keys(groups).sort().forEach((fName) => {
+        const gItems = groups[fName];
+        html += `
+          <section class="section-group">
+            <div class="section-head">
+              <div class="section-head-left">
+                <span class="section-icon">🏷️</span>
+                <h3 class="section-title">${fName}</h3>
+              </div>
+              <span class="section-count-badge">${gItems.length} ${gItems.length === 1 ? 'title' : 'titles'}</span>
             </div>
-          </div>
-
-          <div class="card-actions">
-            <button class="btn-incognito" data-id="${item.id}" title="Copy direct link for Private/Incognito window">
-              <span>⚡</span> Copy Direct
-            </button>
-            <button class="btn-cloak" data-id="${item.id}" title="Copy 2-Layer Cloaked URL">
-              <span>🔒</span> Copy Cloaked
-            </button>
-            <div class="card-sub-acts">
-              <button class="act" data-action="details" data-id="${item.id}">Details</button>
-              <a href="${item.cloakUrl}" target="_blank" rel="noreferrer noopener" class="act act-accent" title="Open 2-Layer Cloak decryptor">Cloak ↗</a>
+            <div class="cards-grid">
+              ${gItems.map(renderCardHtml).join('')}
             </div>
-          </div>
-        </article>
+          </section>
+        `;
+      });
+      cardsContainer.innerHTML = html;
+    } else {
+      cardsContainer.innerHTML = `
+        <div class="cards-grid">
+          ${list.map(renderCardHtml).join('')}
+        </div>
       `;
-      })
-      .join('');
+    }
 
     // Attach card action listeners
     attachCardListeners();
@@ -464,9 +543,28 @@
     });
   });
 
+  typeFilterChips.forEach((chip) => {
+    chip.addEventListener('click', () => {
+      activeTypeFilter = chip.getAttribute('data-type');
+      updateFilterChipUI();
+      render();
+    });
+  });
+
+  modeButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      activeGroupMode = btn.getAttribute('data-mode');
+      modeButtons.forEach((b) => b.classList.toggle('active', b === btn));
+      render();
+    });
+  });
+
   function updateFilterChipUI() {
     filterChips.forEach((c) => {
       c.classList.toggle('active', c.getAttribute('data-filter') === activeFilter);
+    });
+    typeFilterChips.forEach((c) => {
+      c.classList.toggle('active', c.getAttribute('data-type') === activeTypeFilter);
     });
   }
 
