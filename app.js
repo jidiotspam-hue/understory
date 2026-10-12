@@ -1,6 +1,7 @@
-// understory — app.js (Zero-Knowledge Edition)
+// understory — app.js (Zero-Knowledge Tsundere Edition)
+// It's not like I encrypted this whole vault just to protect your privacy, b-baka!
 // Decrypts encrypted vault payload into browser memory strictly using Web Crypto.
-// No raw URLs, keys, or metadata are ever stored unencrypted in repository.
+// No raw URLs, keys, or metadata are ever stored unencrypted in this repository!
 
 (() => {
   const PBKDF2_ITERATIONS = 250000;
@@ -14,6 +15,7 @@
   let sortMode = 'default';
   let favorites = [];
   try {
+    // Fine, I'll remember your favorite items, but don't expect me to look at them!
     favorites = JSON.parse(localStorage.getItem('understory_favorites') || '[]');
   } catch (e) {
     favorites = [];
@@ -63,6 +65,7 @@
   const copyAllCloakBtn = document.getElementById('copy-all-cloak');
 
   // ── Session Auto-Lock Inactivity Timer ──
+  // Hmph! I'm automatically locking this after 15 minutes so nobody peeks over your shoulder!
   let sessionRemaining = 900; // 15 minutes
   let sessionInterval = null;
   let lastActivityTimestamp = Date.now();
