@@ -62,6 +62,7 @@
         <h2 class="locked-title">Encrypted Archive</h2>
         <p class="locked-sub">Zero-Knowledge Vault. Enter your passphrase to decrypt into browser memory.</p>
         <form class="locked-input-row" id="vault-unlock-form" onsubmit="event.preventDefault();">
+          <input type="text" name="username" value="understory" autocomplete="username" style="display:none;" tabindex="-1" aria-hidden="true">
           <input type="password" id="vault-pass-input" name="password" placeholder="Vault passphrase..." autocomplete="current-password" spellcheck="false">
           <button type="submit" id="vault-unlock-btn" class="btn-incognito">Unlock</button>
         </form>
