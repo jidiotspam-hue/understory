@@ -38,9 +38,7 @@
   const modalCharacters = document.getElementById('modal-characters');
   const modalLayer1Key = document.getElementById('modal-layer1-key');
   const modalLayer2Key = document.getElementById('modal-layer2-key');
-  const modalCopyDirectBtn = document.getElementById('modal-copy-direct-btn');
   const modalCopyCloakBtn = document.getElementById('modal-copy-cloak-btn');
-  const modalDirectAnchor = document.getElementById('modal-direct-anchor');
   const modalCloakAnchor = document.getElementById('modal-cloak-anchor');
 
   // Utility Elements
@@ -52,7 +50,6 @@
   const copyLayer1Btn = document.getElementById('copy-layer1-btn');
   const copyLayer2Btn = document.getElementById('copy-layer2-btn');
   const copyAllCloakBtn = document.getElementById('copy-all-cloak');
-  const copyAllUrlsBtn = document.getElementById('copy-all-urls');
 
   // ── Web Crypto Decryption ──
   const b64 = {
@@ -290,11 +287,8 @@
       </div>
 
       <div class="card-actions">
-        <button class="btn-incognito" data-id="${item.id}" title="Copy direct link for Private/Incognito window">
-          <span>⚡</span> Copy Direct
-        </button>
         <button class="btn-cloak" data-id="${item.id}" title="Copy 2-Layer Cloaked URL">
-          <span>🔒</span> Copy Cloaked
+          <span>🔒</span> Copy 2-Layer Cloak
         </button>
         <div class="card-sub-acts">
           <button class="act" data-action="details" data-id="${item.id}">Details</button>
@@ -437,30 +431,6 @@
       });
     });
 
-    // One-click Incognito Direct URL Copy button
-    cardsContainer.querySelectorAll('.btn-incognito').forEach((btn) => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const id = btn.getAttribute('data-id');
-        const item = VIDEO_DATA.find((v) => v.id === id);
-        if (!item) return;
-
-        const originalText = btn.innerHTML;
-        btn.innerHTML = `<span>✓</span> Copied!`;
-        btn.style.background = 'var(--moss)';
-
-        await copyToClipboard(
-          item.directUrl,
-          `Direct URL copied! Open Incognito (⌘+Shift+N) & paste URL`
-        );
-
-        setTimeout(() => {
-          btn.innerHTML = originalText;
-          btn.style.background = '';
-        }, 1800);
-      });
-    });
-
     // Details / Shield button
     cardsContainer.querySelectorAll('[data-action="details"]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
@@ -480,8 +450,6 @@
     modalVideoTitle.textContent = item.title;
     modalFranchise.textContent = item.franchiseName;
     modalCharacters.textContent = item.characters.join(', ');
-    modalDirectAnchor.href = item.directUrl;
-    modalDirectAnchor.textContent = item.directUrl;
 
     if (modalLayer1Key) modalLayer1Key.textContent = item.layer1Key;
     if (modalLayer2Key) modalLayer2Key.textContent = item.layer2Key;
@@ -516,14 +484,6 @@
 
   shieldDialog.addEventListener('click', (e) => {
     if (e.target === shieldDialog) shieldDialog.close();
-  });
-
-  modalCopyDirectBtn.addEventListener('click', () => {
-    if (!selectedVideo) return;
-    copyToClipboard(
-      selectedVideo.directUrl,
-      'Direct URL copied! Press ⌘+Shift+N to open Private Tab & paste.'
-    );
   });
 
   modalCopyCloakBtn.addEventListener('click', () => {
@@ -617,15 +577,6 @@
       );
     });
   }
-
-  copyAllUrlsBtn.addEventListener('click', () => {
-    const filtered = getFilteredVideos();
-    const urls = filtered.map((v) => `${v.title}\n${v.directUrl}`).join('\n\n');
-    copyToClipboard(
-      urls,
-      `Copied all ${filtered.length} Direct URLs to clipboard for batch viewing!`
-    );
-  });
 
   // ── Theme Toggle ──
   const storedTheme = localStorage.getItem('understory-theme');

@@ -134,8 +134,7 @@
         <div class="batch-buttons">
           <button id="copy-layer1-btn" class="act act-accent" title="Copy Layer 1 Key">Copy L1 Key</button>
           <button id="copy-layer2-btn" class="act act-accent" title="Copy Layer 2 Key">Copy L2 Key</button>
-          <button id="copy-all-cloak" class="act" title="Copy all matching 2-Layer cloaked URLs">Copy All Cloak URLs</button>
-          <button id="copy-all-urls" class="act" title="Copy all matching direct URLs for incognito batch">Copy All Direct URLs</button>
+          <button id="copy-all-cloak" class="act act-strong" title="Copy all matching 2-Layer cloaked URLs">Copy All Cloak URLs</button>
           <button id="lock-vault-btn" class="act" title="Lock the vault and clear session memory">Lock Vault</button>
         </div>
       </section>
@@ -152,7 +151,7 @@
           <span class="foot-sub">Vault unlocked. Video links protected by Layer 1 (Outer) &amp; Layer 2 (Inner).</span>
         </div>
         <div class="foot-right">
-          <a href="https://jidiotspam-hue.github.io/cloak/" target="_blank" rel="noopener noreferrer" class="act">Open Cloak Tool ↗</a>
+          <a href="https://jidiotspam-hue.github.io/cloak/#c=AveOub3k3OqwxKXbdsL8TgQB_BcFpC1cZUPhh9KDwQfp9in3ttH7K-4klGMNRI1GQ3MAhLntNtom9NDTTojYd8Z0X9ZdamGT1HfgTXfAgkmcLkUKM7EBEKX1AEVGrz1_ToebSLm4-fYaSW0h_iIQfDJpt9sQ4fec636KgkKoiQeN1rhSBAdqZ1ai_HqHlERCi2t60NB1AgWYSX8TqBYiXVhRTA2kSKun0IiScU5TMjmns-C-Ruv631PwHmcRtE8XX9gVYWzOuge76cC6ZELlYRucWNouus3qop0asvzCg4OFzHZIZtiPbYcn9ypfuigka5yJBYOYs4PAzqTUvCPtL0tBSYXuAE_rgwsBm0aFk4kQ_a_Gr1dFLJmkSt7x57XppuExdkG4sGCdB3Md8QoQtnjE23ZTirPKr7odvrtsWdccMsvErYy_-Ca1guEdZsbbn3RNFSgbeQI4VacnmHGOFOQ8VyBUU7WtmY0" target="_blank" rel="noopener noreferrer" class="act">Secure 3-Layer Portal ↗</a>
         </div>
       </footer>
     </div>
@@ -193,36 +192,18 @@
       </div>
 
       <div class="modal-actions">
-        <!-- Direct Incognito Copy (Primary) -->
-        <button id="modal-copy-direct-btn" class="btn btn-primary">
-          <span class="btn-icon">⚡</span>
-          <span class="btn-text">
-            <strong>Copy Direct URL</strong>
-            <small>Press ⌘+Shift+N (Private Tab) &amp; Paste</small>
-          </span>
-        </button>
-
-        <!-- Cloaked Link Copy -->
-        <button id="modal-copy-cloak-btn" class="btn btn-secondary">
+        <!-- Cloaked Link Copy (Primary) -->
+        <button id="modal-copy-cloak-btn" class="btn btn-primary">
           <span class="btn-icon">🔒</span>
           <span class="btn-text">
             <strong>Copy 2-Layer Cloaked URL</strong>
-            <small id="modal-cloak-sub">Encrypted 2-layer URL</small>
+            <small id="modal-cloak-sub">Encrypted 2-layer URL (L1 ➔ L2)</small>
           </span>
         </button>
 
-        <a id="modal-cloak-anchor" href="#" target="_blank" rel="noreferrer noopener" class="act act-accent" style="display:flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:6px;text-align:center;text-decoration:none;font-weight:600;gap:8px;">
+        <a id="modal-cloak-anchor" href="#" target="_blank" rel="noreferrer noopener" class="act act-accent" style="display:flex;align-items:center;justify-content:center;padding:12px 14px;border-radius:6px;text-align:center;text-decoration:none;font-weight:600;gap:8px;">
           <span>🌐</span> Open 2-Layer Cloak Decryptor ↗
         </a>
-
-        <!-- Right Click Instruction Reminder -->
-        <div class="modal-hint">
-          <strong>Tip:</strong> You can also right-click the link below and choose <em>"Open Link in Incognito Window"</em>:
-        </div>
-
-        <div class="direct-link-container">
-          <a id="modal-direct-anchor" href="#" target="_blank" rel="noreferrer noopener" class="direct-link-preview"></a>
-        </div>
       </div>
     </div>
   </dialog>
