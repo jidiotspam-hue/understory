@@ -346,16 +346,18 @@
 
       if (!searchQuery) return true;
 
-      const q = searchQuery.toLowerCase();
-      const titleMatch = v.title.toLowerCase().includes(q);
-      const fullTitleMatch = v.fullTitle.toLowerCase().includes(q);
-      const franchiseMatch = v.franchiseName.toLowerCase().includes(q);
-      const typeMatch = (v.typeName || '').toLowerCase().includes(q);
-      const tagMatch = v.userTag.toLowerCase().includes(q);
-      const charMatch = v.characters.some((c) => c.toLowerCase().includes(q));
-      const badgeMatch = v.badges.some((b) => b.toLowerCase().includes(q));
+      const words = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
+      const searchable = [
+        v.title,
+        v.fullTitle,
+        v.franchiseName,
+        v.typeName || '',
+        v.userTag,
+        ...v.characters,
+        ...v.badges
+      ].join(' ').toLowerCase();
 
-      return titleMatch || fullTitleMatch || franchiseMatch || typeMatch || tagMatch || charMatch || badgeMatch;
+      return words.every((w) => searchable.includes(w));
     });
 
     const list = [...filtered];

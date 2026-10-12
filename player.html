@@ -465,6 +465,11 @@
         <span>👁️</span> <span id="auto-disguise-label">Auto-Hide: Off</span>
       </button>
 
+      <!-- Sleep Timer -->
+      <button id="sleep-btn" type="button" class="act" title="Sleep timer (Z)">
+        <span>🌙</span> <span id="sleep-label">Sleep: Off</span>
+      </button>
+
       <!-- Back to Archive -->
       <a href="index.html" class="act" title="Return to vault archive">
         <span>←</span> Vault
@@ -480,7 +485,7 @@
     </div>
   </div>
 
-  <p class="hint">Shortcuts: <kbd>M</kbd> Mute • <kbd>T</kbd> Theater • <kbd>F</kbd> Fullscreen • <kbd>A</kbd> Aspect • <kbd>P</kbd> Pop-out • <kbd>H</kbd> Auto-Hide • <kbd>Esc</kbd> Disguise</p>
+  <p class="hint">Shortcuts: <kbd>M</kbd> Mute • <kbd>↑</kbd><kbd>↓</kbd> Volume • <kbd>T</kbd> Theater • <kbd>F</kbd> Fullscreen • <kbd>A</kbd> Aspect • <kbd>P</kbd> Pop-out • <kbd>Z</kbd> Sleep • <kbd>H</kbd> Auto-Hide • <kbd>Esc</kbd> Disguise</p>
 </main>
 
 <!-- Camouflage Decoy Screen -->
@@ -522,6 +527,8 @@
     const pipBtn = document.getElementById('pip-btn');
     const autoDisguiseBtn = document.getElementById('auto-disguise-btn');
     const autoDisguiseLabel = document.getElementById('auto-disguise-label');
+    const sleepBtn = document.getElementById('sleep-btn');
+    const sleepLabel = document.getElementById('sleep-label');
     const panicBtn = document.getElementById('panic-btn');
     const decoyView = document.getElementById('decoy-view');
     const decoyExitBtn = document.getElementById('decoy-exit-btn');
@@ -727,6 +734,72 @@
       }
     });
 
+    // Volume Adjustment
+    let currentVolume = 100;
+    function adjustVolume(delta) {
+      currentVolume = Math.max(0, Math.min(100, currentVolume + delta));
+      if (currentVolume === 0) {
+        setMute(true);
+      } else if (isMuted) {
+        setMute(false);
+      }
+      muteIconHud.textContent = currentVolume > 50 ? '🔊' : (currentVolume > 0 ? '🔉' : '🔇');
+      muteTextHud.textContent = `${currentVolume}%`;
+      muteIndicator.classList.add('visible');
+      if (muteTimer) clearTimeout(muteTimer);
+      muteTimer = setTimeout(() => muteIndicator.classList.remove('visible'), 1600);
+
+      try {
+        if (videoFrame && videoFrame.contentWindow) {
+          videoFrame.contentWindow.postMessage(`{"event":"command","func":"setVolume","args":[${currentVolume}]}`, '*');
+          videoFrame.contentWindow.postMessage(`{"method":"setVolume","value":${currentVolume / 100}}`, '*');
+        }
+      } catch (e) {}
+    }
+
+    // Sleep Timer
+    const sleepDurations = [0, 15, 30, 45, 60]; // in minutes
+    let sleepIdx = 0;
+    let sleepInterval = null;
+    let sleepSecondsRemaining = 0;
+
+    function updateSleepUI() {
+      if (!sleepLabel) return;
+      if (sleepSecondsRemaining > 0) {
+        const m = Math.floor(sleepSecondsRemaining / 60);
+        const s = sleepSecondsRemaining % 60;
+        sleepLabel.textContent = `Sleep: ${m}:${String(s).padStart(2, '0')}`;
+        sleepBtn.classList.add('act-accent');
+      } else {
+        sleepLabel.textContent = 'Sleep: Off';
+        sleepBtn.classList.remove('act-accent');
+      }
+    }
+
+    function cycleSleepTimer() {
+      sleepIdx = (sleepIdx + 1) % sleepDurations.length;
+      const mins = sleepDurations[sleepIdx];
+      if (sleepInterval) clearInterval(sleepInterval);
+      if (mins === 0) {
+        sleepSecondsRemaining = 0;
+        updateSleepUI();
+      } else {
+        sleepSecondsRemaining = mins * 60;
+        updateSleepUI();
+        sleepInterval = setInterval(() => {
+          sleepSecondsRemaining--;
+          updateSleepUI();
+          if (sleepSecondsRemaining <= 0) {
+            clearInterval(sleepInterval);
+            sleepInterval = null;
+            togglePanic(true);
+          }
+        }, 1000);
+      }
+    }
+
+    if (sleepBtn) sleepBtn.addEventListener('click', cycleSleepTimer);
+
     // Panic Disguise Mode
     function togglePanic(forceState) {
       isPanic = typeof forceState === 'boolean' ? forceState : !isPanic;
@@ -757,6 +830,12 @@
         togglePanic();
       } else if (e.key === 'm' || e.key === 'M') {
         setMute(!isMuted);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        adjustVolume(10);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        adjustVolume(-10);
       } else if (e.key === 't' || e.key === 'T') {
         playerWrap.classList.toggle('theater');
       } else if (e.key === 'f' || e.key === 'F') {
@@ -766,6 +845,8 @@
         cycleAspectRatio();
       } else if (e.key === 'p' || e.key === 'P') {
         openPopOut();
+      } else if (e.key === 'z' || e.key === 'Z') {
+        cycleSleepTimer();
       } else if (e.key === 'h' || e.key === 'H') {
         toggleAutoDisguise();
       }
