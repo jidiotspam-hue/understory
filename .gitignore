@@ -1,0 +1,6 @@
+*.sh
+*keys*
+*.env
+*.log
+.DS_Store
+vault.json

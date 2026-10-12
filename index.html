@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>understory — curated index</title>
+  <meta name="description" content="A quiet, earthy index of curated links. Zero-knowledge encrypted.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%236B5AA0'/><circle cx='16' cy='16' r='6' fill='%23F3EEE8'/></svg>">
+</head>
+<body>
+
+  <!-- Decoy Lecture Screen (Press Esc or click Camouflage) -->
+  <div id="decoy-view" class="decoy-view" hidden>
+    <div class="decoy-inner">
+      <header class="decoy-header">
+        <span class="decoy-tag">HUM-342 • Syllabus &amp; Reading Notes</span>
+        <h2>Comparative Folklore &amp; Narrative Structures in Modern Japanese Media</h2>
+        <p class="decoy-meta">Department of East Asian Studies • Fall Term • Prof. K. Arisawa</p>
+      </header>
+      <section class="decoy-body">
+        <div class="decoy-note">
+          <h3>Week 6: Archetypes of the Trickster and the Vow</h3>
+          <p>Analyzing recurring motifs in contemporary animation serials. Focus on contrasting the supernatural contract tropes in post-2010 serialization with classical Heian folkloric traditions.</p>
+          <ul>
+            <li><strong>Reading 1:</strong> The Quintessential Tropes: Multiple Protagonist Symmetry (pp. 45–82)</li>
+            <li><strong>Reading 2:</strong> Taisho-era Demonology and Sword Mythology in Popular Print (pp. 104–130)</li>
+            <li><strong>Reading 3:</strong> Subversive Contracts in Urban Dark Fantasy (pp. 210–245)</li>
+          </ul>
+        </div>
+      </section>
+      <div class="decoy-footer">
+        <button id="decoy-exit-btn" class="act act-strong">Return to Index (Esc)</button>
+      </div>
+    </div>
+  </div>
+
+  <main id="app">
+    <!-- Top Header -->
+    <header class="head">
+      <div class="head-top">
+        <h1 class="wordmark">
+          <span class="mark" aria-hidden="true"><i></i></span>understory
+        </h1>
+        <div class="head-actions">
+          <button id="theme-toggle" class="icon-btn" title="Toggle Light/Dark Theme" aria-label="Toggle theme">
+            <span class="theme-icon">◐</span>
+          </button>
+          <button id="camouflage-btn" class="icon-btn" title="Stealth / Camouflage Mode (Esc)" aria-label="Stealth mode">
+            <span class="cam-icon">⌘</span>
+          </button>
+        </div>
+      </div>
+      <p class="statusline" id="status-line">A quiet, earthy archive. Built incognito-first to protect your browsing history.</p>
+    </header>
+
+    <!-- Locked Vault View (Shown when encrypted) -->
+    <section id="vault-locked-view" class="vault-locked-view">
+      <div class="locked-card">
+        <div class="locked-icon">🔒</div>
+        <h2 class="locked-title">Encrypted Archive</h2>
+        <p class="locked-sub">Zero-Knowledge Vault. Enter your passphrase to decrypt into browser memory.</p>
+        <div class="locked-input-row">
+          <input type="password" id="vault-pass-input" placeholder="Vault passphrase..." autocomplete="off" spellcheck="false">
+          <button id="vault-unlock-btn" class="btn-incognito">Unlock</button>
+        </div>
+        <p id="vault-err" class="err" hidden>Incorrect passphrase. Please try again.</p>
+      </div>
+    </section>
+
+    <!-- Unlocked Vault View (Populated only after in-memory decryption) -->
+    <div id="vault-unlocked-view" hidden>
+      <!-- Incognito Shield Notice Banner -->
+      <section class="shield-banner">
+        <div class="shield-badge">
+          <span class="shield-icon">🛡️</span>
+          <span class="shield-text"><strong>History Shield Active:</strong> Clicking any entry provides one-click Incognito copying so your browser history &amp; autocomplete stay pristine.</span>
+        </div>
+      </section>
+
+      <!-- Search & Filters -->
+      <section class="controls-section">
+        <div class="search-wrap">
+          <input type="text" id="search-input" placeholder="Search by character, anime, or tag..." autocomplete="off" spellcheck="false">
+          <button id="clear-search" class="clear-btn" hidden aria-label="Clear search">×</button>
+        </div>
+
+        <nav class="filter-bar" id="filter-bar" aria-label="Filter by franchise">
+          <button class="filter-chip active" data-filter="all">All <span class="count" id="count-all">12</span></button>
+          <button class="filter-chip" data-filter="quintuplets">Quintuplets <span class="count" id="count-quintuplets">5</span></button>
+          <button class="filter-chip" data-filter="demon-slayer">Demon Slayer <span class="count" id="count-demon-slayer">3</span></button>
+          <button class="filter-chip" data-filter="chainsaw-man">Chainsaw Man <span class="count" id="count-chainsaw-man">1</span></button>
+          <button class="filter-chip" data-filter="re-zero">Re:Zero <span class="count" id="count-re-zero">1</span></button>
+          <button class="filter-chip" data-filter="horimiya">Horimiya <span class="count" id="count-horimiya">1</span></button>
+          <button class="filter-chip" data-filter="100-kanojo">100 Kanojo <span class="count" id="count-100-kanojo">1</span></button>
+        </nav>
+      </section>
+
+      <!-- Global Batch Actions -->
+      <section class="batch-bar">
+        <span class="batch-label" id="results-count">12 titles found</span>
+        <div class="batch-buttons">
+          <button id="lock-vault-btn" class="act" title="Lock the vault and clear session memory">Lock Vault</button>
+          <button id="copy-all-urls" class="act act-accent" title="Copy all matching URLs for incognito batch">Copy All URLs</button>
+        </div>
+      </section>
+
+      <!-- Cards Grid -->
+      <section id="cards-container" class="cards-grid">
+        <!-- Populated via in-memory decryption -->
+      </section>
+
+      <!-- Footer -->
+      <footer class="foot">
+        <div class="foot-left">
+          <span>understory • zero-knowledge earthy index</span>
+          <span class="foot-sub">Decrypted strictly in browser memory via AES-GCM.</span>
+        </div>
+        <div class="foot-right">
+          <a href="https://jidiotspam-hue.github.io/cloak/" target="_blank" rel="noopener noreferrer" class="act">Open Cloak Tool ↗</a>
+        </div>
+      </footer>
+    </div>
+  </main>
+
+  <!-- Incognito Shield Dialog Modal -->
+  <dialog id="shield-dialog" class="modal-dialog">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div class="modal-title-row">
+          <span class="modal-shield-icon">🛡️</span>
+          <h3 id="modal-video-title">Open in Incognito</h3>
+        </div>
+        <button id="modal-close-btn" class="modal-close" aria-label="Close dialog">×</button>
+      </div>
+
+      <p class="modal-desc">
+        To prevent this link from poisoning your browser history, address bar autocomplete, or cloud sync, choose your preferred method:
+      </p>
+
+      <div class="modal-details">
+        <div class="detail-row">
+          <span class="detail-label">Franchise</span>
+          <span class="detail-val" id="modal-franchise"></span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Characters</span>
+          <span class="detail-val" id="modal-characters"></span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <!-- Direct Incognito Copy (Primary) -->
+        <button id="modal-copy-direct-btn" class="btn btn-primary">
+          <span class="btn-icon">⚡</span>
+          <span class="btn-text">
+            <strong>Copy Direct URL</strong>
+            <small>Press ⌘+Shift+N (Private Tab) &amp; Paste</small>
+          </span>
+        </button>
+
+        <!-- Cloaked Link Copy -->
+        <button id="modal-copy-cloak-btn" class="btn btn-secondary">
+          <span class="btn-icon">🔒</span>
+          <span class="btn-text">
+            <strong>Copy Cloaked Link</strong>
+            <small>Multi-layer encrypted URL</small>
+          </span>
+        </button>
+
+        <!-- Right Click Instruction Reminder -->
+        <div class="modal-hint">
+          <strong>Tip:</strong> You can also right-click the link below and choose <em>"Open Link in Incognito Window"</em>:
+        </div>
+
+        <div class="direct-link-container">
+          <a id="modal-direct-anchor" href="#" target="_blank" rel="noreferrer noopener" class="direct-link-preview"></a>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
