@@ -61,10 +61,10 @@
         <div class="locked-icon">🔒</div>
         <h2 class="locked-title">Encrypted Archive</h2>
         <p class="locked-sub">Zero-Knowledge Vault. Enter your passphrase to decrypt into browser memory.</p>
-        <div class="locked-input-row">
-          <input type="password" id="vault-pass-input" placeholder="Vault passphrase..." autocomplete="off" spellcheck="false">
-          <button id="vault-unlock-btn" class="btn-incognito">Unlock</button>
-        </div>
+        <form class="locked-input-row" id="vault-unlock-form" onsubmit="event.preventDefault();">
+          <input type="password" id="vault-pass-input" name="password" placeholder="Vault passphrase..." autocomplete="current-password" spellcheck="false">
+          <button type="submit" id="vault-unlock-btn" class="btn-incognito">Unlock</button>
+        </form>
         <p id="vault-err" class="err" hidden>Incorrect passphrase. Please try again.</p>
       </div>
     </section>

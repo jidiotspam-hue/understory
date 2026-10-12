@@ -143,12 +143,26 @@
     showToast('Vault locked and memory cleared');
   }
 
+  const vaultUnlockForm = document.getElementById('vault-unlock-form');
+  if (vaultUnlockForm) {
+    vaultUnlockForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      attemptUnlock(vaultPassInput.value.trim());
+    });
+  }
+
   vaultUnlockBtn.addEventListener('click', () => {
     attemptUnlock(vaultPassInput.value.trim());
   });
 
   vaultPassInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') attemptUnlock(vaultPassInput.value.trim());
+  });
+
+  // Automatically attempt unlock when Touch ID autofills the field
+  vaultPassInput.addEventListener('change', () => {
+    const val = vaultPassInput.value.trim();
+    if (val.length > 0) attemptUnlock(val);
   });
 
   lockVaultBtn.addEventListener('click', lockVault);
