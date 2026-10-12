@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Aether Studio • 4K Reference Player</title>
+  <meta name="description" content="Hardware-accelerated 4K reference media player and render preview pipeline.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%236B5AA0'/><path d='M12 9l12 7-12 7V9z' fill='%23FAF7F2'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #110F18;
+      --surface: #191624;
+      --surface-elevated: #221E33;
+      --border: #2D2742;
+      --border-focus: #524775;
+      --ink: #EDE7F3;
+      --muted: #9E96AD;
+      --faint: #4B4361;
+      --accent: #B49BEF;
+      --accent-strong: #8C6FE0;
+      --accent-glow: rgba(180, 155, 239, 0.25);
+      --success: #6EE7B7;
+      --gold: #FCD34D;
+      --danger: #F87171;
+      --font-heading: "Caprasimo", serif;
+      --font-body: "Figtree", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "JetBrains Mono", monospace;
+      --radius: 12px;
+      --ease: cubic-bezier(.32, .72, 0, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--ink);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    /* Ambient monitor backdrop glow */
+    .ambient-glow {
+      position: fixed;
+      top: 15%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80vw;
+      max-width: 1200px;
+      height: 400px;
+      background: radial-gradient(ellipse at center, rgba(140, 111, 224, 0.12) 0%, rgba(17, 15, 24, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Header Deck */
+    header.top-deck {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(25, 22, 36, 0.88);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-mark {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #6B5AA0, #A65D48);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 10px rgba(107, 90, 160, 0.4);
+    }
+
+    .brand-mark svg {
+      width: 16px;
+      height: 16px;
+      fill: #FAF7F2;
+    }
+
+    .brand-text h1 {
+      font-family: var(--font-heading);
+      font-size: 1.15rem;
+      letter-spacing: -0.01em;
+      line-height: 1.1;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand-text p {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--ink);
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s var(--ease);
+      text-decoration: none;
+      user-select: none;
+    }
+
+    .action-btn:hover {
+      background: var(--surface-elevated);
+      border-color: var(--border-focus);
+      transform: translateY(-1px);
+    }
+
+    .action-btn.panic-btn {
+      background: rgba(248, 113, 113, 0.12);
+      border-color: rgba(248, 113, 113, 0.35);
+      color: #FCA5A5;
+    }
+
+    .action-btn.panic-btn:hover {
+      background: rgba(248, 113, 113, 0.25);
+      border-color: #F87171;
+    }
+
+    /* Main Monitor Workspace */
+    main.studio-workspace {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      width: 100%;
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 1.25rem 1.5rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* Video Frame Stage */
+    .monitor-stage {
+      position: relative;
+      width: 100%;
+      background: #000;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      aspect-ratio: 16 / 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .monitor-stage.theater-mode {
+      max-width: 100vw;
+      border-radius: 0;
+      margin: -1.25rem -1.5rem 0;
+      border-left: none;
+      border-right: none;
+      max-height: 82vh;
+    }
+
+    .monitor-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+      background: #000;
+    }
+
+    /* Empty / Standby Placeholder */
+    .standby-state {
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      max-width: 540px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .standby-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-size: 1.75rem;
+    }
+
+    .standby-state h2 {
+      font-family: var(--font-heading);
+      font-size: 1.5rem;
+    }
+
+    .standby-state p {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.6;
+    }
+
+    /* Video Info & Telemetry HUD */
+    .studio-hud {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: start;
+      gap: 1.25rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+    }
+
+    .hud-title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .hud-title-block .meta-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }
+
+    .hud-title-block h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+    }
+
+    .hud-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.25rem;
+    }
+
+    .hud-badge {
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-weight: 500;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface-elevated);
+      color: var(--muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .hud-badge.gold {
+      background: rgba(252, 211, 77, 0.1);
+      border-color: rgba(252, 211, 77, 0.3);
+      color: var(--gold);
+    }
+
+    .hud-badge.green {
+      background: rgba(110, 231, 183, 0.1);
+      border-color: rgba(110, 231, 183, 0.3);
+      color: var(--success);
+    }
+
+    .hud-badge.accent {
+      background: rgba(180, 155, 239, 0.12);
+      border-color: rgba(180, 155, 239, 0.35);
+      color: var(--accent);
+    }
+
+    /* Hardware Telemetry Deck */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      min-width: 320px;
+    }
+
+    .telemetry-cell {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.55rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .telemetry-cell .t-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+
+    .telemetry-cell .t-val {
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    /* Audio Enhancement Bar */
+    .audio-enhancement-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.9rem 1.25rem;
+      font-size: 0.85rem;
+    }
+
+    .audio-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .audio-eq-wave {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 18px;
+    }
+
+    .eq-bar {
+      width: 3px;
+      background: var(--accent);
+      border-radius: 2px;
+      animation: eqBounce 1.2s infinite ease-in-out alternate;
+    }
+
+    .eq-bar:nth-child(1) { height: 40%; animation-delay: 0.1s; }
+    .eq-bar:nth-child(2) { height: 80%; animation-delay: 0.3s; }
+    .eq-bar:nth-child(3) { height: 60%; animation-delay: 0.2s; }
+    .eq-bar:nth-child(4) { height: 95%; animation-delay: 0.5s; }
+    .eq-bar:nth-child(5) { height: 50%; animation-delay: 0.4s; }
+
+    @keyframes eqBounce {
+      0% { transform: scaleY(0.4); }
+      100% { transform: scaleY(1); }
+    }
+
+    .audio-switches {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .switch-pill {
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      padding: 0.3rem 0.65rem;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface-elevated);
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s;
+    }
+
+    .switch-pill.active {
+      background: var(--accent);
+      border-color: var(--accent-strong);
+      color: #171521;
+      font-weight: 600;
+    }
+
+    /* Keyboard Shortcuts Footer */
+    .shortcuts-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      padding: 0.5rem 0.25rem;
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+
+    .shortcut-list {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    kbd {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.15rem 0.4rem;
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    }
+
+    /* ── CAMOUFLAGE / PANIC DECOY VIEW ── */
+    #decoy-layer {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #0B0F19;
+      color: #94A3B8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 2rem;
+      display: none;
+      flex-direction: column;
+      gap: 1.5rem;
+      overflow-y: auto;
+    }
+
+    #decoy-layer.active {
+      display: flex;
+    }
+
+    .decoy-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #1E293B;
+      padding-bottom: 1rem;
+    }
+
+    .decoy-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #F8FAFC;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .decoy-canvas-wrap {
+      flex: 1;
+      background: #020617;
+      border: 1px solid #1E293B;
+      border-radius: 8px;
+      position: relative;
+      min-height: 400px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    #decoy-canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .decoy-hud-overlay {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: #38BDF8;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid #1E293B;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      line-height: 1.6;
+    }
+
+    .decoy-exit {
+      background: #1E293B;
+      border: 1px solid #334155;
+      color: #CBD5E1;
+      padding: 0.4rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    @media (max-width: 768px) {
+      header.top-deck { padding: 0.6rem 1rem; }
+      main.studio-workspace { padding: 0.75rem 1rem 2rem; }
+      .studio-hud { grid-template-columns: 1fr; }
+      .telemetry-grid { grid-template-columns: repeat(2, 1fr); min-width: auto; }
+      .shortcuts-footer { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-glow"></div>
+
+  <!-- Header Deck -->
+  <header class="top-deck">
+    <a href="index.html" class="brand-wrap" title="Return to Vault Archive">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>Aether Studio</h1>
+        <p>4K Reference Player • RAM Buffer v4.2</p>
+      </div>
+    </a>
+
+    <div class="header-actions">
+      <a href="index.html" class="action-btn" title="Back to Collection">
+        <span>← Archive</span>
+      </a>
+      <button id="theater-toggle-btn" class="action-btn" type="button" title="Toggle Cinema Theater Mode (T)">
+        <span>⛶ Theater</span>
+      </button>
+      <button id="fullscreen-btn" class="action-btn" type="button" title="Fullscreen (F)">
+        <span>🖥 Fullscreen</span>
+      </button>
+      <button id="panic-disguise-btn" class="action-btn panic-btn" type="button" title="Emergency Camouflage (Esc)">
+        <span>🛡️ Panic (Esc)</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Studio Workspace -->
+  <main class="studio-workspace">
+
+    <!-- Monitor Stage -->
+    <div id="monitor-stage" class="monitor-stage">
+      <div id="standby-box" class="standby-state">
+        <div class="standby-icon">⚡</div>
+        <h2>Studio Monitor Standby</h2>
+        <p>Ready to stream in-memory video assets. Load a cloaked or archived item from the collection to initialize 4K hardware acceleration.</p>
+        <a href="index.html" class="action-btn" style="margin-top: 0.5rem; background: var(--accent); color: #171521; font-weight: 600; border: none;">
+          Open Vault Archive →
+        </a>
+      </div>
+      <iframe id="video-frame" class="monitor-frame" style="display: none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen></iframe>
+    </div>
+
+    <!-- Video HUD & Telemetry -->
+    <div class="studio-hud">
+      <div class="hud-title-block">
+        <span class="meta-label" id="meta-franchise-label">Direct Studio Pipeline</span>
+        <h2 id="media-title">Ready for Playback</h2>
+        <div class="hud-badges" id="media-badges">
+          <span class="hud-badge gold">4K UHD 2160p</span>
+          <span class="hud-badge green">60 FPS Native</span>
+          <span class="hud-badge accent">RAM-Resident</span>
+          <span class="hud-badge">Zero History Trace</span>
+        </div>
+      </div>
+
+      <div class="telemetry-grid">
+        <div class="telemetry-cell">
+          <span class="t-label">Engine</span>
+          <span class="t-val">WebGL / GPU</span>
+        </div>
+        <div class="telemetry-cell">
+          <span class="t-label">Audio Pipeline</span>
+          <span class="t-val">48kHz / 32-bit</span>
+        </div>
+        <div class="telemetry-cell">
+          <span class="t-label">Buffer State</span>
+          <span class="t-val" style="color: var(--success);" id="buffer-indicator">RAM Cached</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Audio Engine & Enhancement Deck -->
+    <div class="audio-enhancement-bar">
+      <div class="audio-info">
+        <div class="audio-eq-wave">
+          <div class="eq-bar"></div>
+          <div class="eq-bar"></div>
+          <div class="eq-bar"></div>
+          <div class="eq-bar"></div>
+          <div class="eq-bar"></div>
+        </div>
+        <span style="font-weight: 600;">High-Fidelity Sound Engine</span>
+        <span style="color: var(--muted); font-size: 0.8rem;">(4K Spatial Equalization Active)</span>
+      </div>
+
+      <div class="audio-switches">
+        <span class="switch-pill active" id="sw-bass">Bass Boost (+4dB)</span>
+        <span class="switch-pill active" id="sw-clarity">Voice Clarity</span>
+        <span class="switch-pill active" id="sw-norm">Dynamic Leveller</span>
+      </div>
+    </div>
+
+    <!-- Shortcuts Footer -->
+    <footer class="shortcuts-footer">
+      <div class="shortcut-list">
+        <span><kbd>T</kbd> Cinema Theater</span>
+        <span><kbd>F</kbd> Fullscreen</span>
+        <span><kbd>Esc</kbd> Emergency Disguise</span>
+        <span><kbd>Space</kbd> Toggle Playback</span>
+      </div>
+      <div>Security: Zero-Trace URL Sanitized on Mount</div>
+    </footer>
+  </main>
+
+  <!-- Camouflage / Panic Decoy Screen -->
+  <div id="decoy-layer">
+    <div class="decoy-nav">
+      <div class="decoy-title">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38BDF8" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        WebGL Compute &amp; Mesh Shader Benchmark v3.4.1
+      </div>
+      <button class="decoy-exit" id="decoy-exit-btn">Resume Session (Esc)</button>
+    </div>
+
+    <div class="decoy-canvas-wrap">
+      <canvas id="decoy-canvas"></canvas>
+      <div class="decoy-hud-overlay">
+        <div>Target: RTX Hardware Mesh Shader Pipeline</div>
+        <div>Active Vertices: 142,800 • Triangles: 47,600</div>
+        <div>Frametime: 16.6ms (59.98 FPS) • VRAM: 1.42 GB</div>
+        <div>Pass: Deferred Surface G-Buffer + Ambient Occlusion</div>
+      </div>
+    </div>
+
+    <div style="font-size: 0.75rem; color: #64748B; font-family: monospace;">
+      Host: macOS Darwin 24.2.0 • Architecture: arm64 • Compute Unit: Apple M-Series Metal API
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const monitorStage = document.getElementById('monitor-stage');
+      const standbyBox = document.getElementById('standby-box');
+      const videoFrame = document.getElementById('video-frame');
+      const mediaTitle = document.getElementById('media-title');
+      const franchiseLabel = document.getElementById('meta-franchise-label');
+      const mediaBadges = document.getElementById('media-badges');
+      const theaterBtn = document.getElementById('theater-toggle-btn');
+      const fullscreenBtn = document.getElementById('fullscreen-btn');
+      const panicBtn = document.getElementById('panic-disguise-btn');
+      const decoyLayer = document.getElementById('decoy-layer');
+      const decoyExitBtn = document.getElementById('decoy-exit-btn');
+      const bufferIndicator = document.getElementById('buffer-indicator');
+
+      let currentData = null;
+      let isPanic = false;
+
+      // URL-Safe Base64 Decoder
+      function decodePayload(b64) {
+        b64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        const bin = atob(b64);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return JSON.parse(new TextDecoder().decode(bytes));
+      }
+
+      // Check URL Fragment (#v=...)
+      function initFromUrl() {
+        const hash = window.location.hash;
+        if (hash && hash.startsWith('#v=')) {
+          try {
+            const raw = hash.slice(3);
+            currentData = decodePayload(raw);
+
+            // Instant sanitization: Remove payload from browser address bar & history!
+            history.replaceState(null, '', window.location.pathname);
+
+            loadMedia(currentData);
+          } catch (err) {
+            console.error('Failed to parse video payload', err);
+          }
+        }
+      }
+
+      function loadMedia(data) {
+        if (!data) return;
+
+        // Set text & meta
+        mediaTitle.textContent = data.title || 'Studio Reference Stream';
+        franchiseLabel.textContent = data.franchise ? `${data.franchise} • Reference Preview` : 'Direct Studio Pipeline';
+        document.title = `${data.title || 'Studio Preview'} • Aether Studio`;
+
+        // Render badges
+        mediaBadges.innerHTML = '';
+        const badges = [
+          { text: data.quality || '4K UHD 2160p', cls: 'gold' },
+          { text: '60 FPS Native', cls: 'green' },
+          { text: 'Hi-Fi Stereo', cls: 'accent' },
+          { text: 'RAM Buffer Active', cls: 'green' }
+        ];
+
+        if (Array.isArray(data.badges)) {
+          data.badges.forEach(b => {
+            if (b && !badges.find(x => x.text.toLowerCase() === b.toLowerCase())) {
+              badges.push({ text: b, cls: '' });
+            }
+          });
+        }
+
+        badges.forEach(b => {
+          const span = document.createElement('span');
+          span.className = `hud-badge ${b.cls}`.trim();
+          span.textContent = b.text;
+          mediaBadges.appendChild(span);
+        });
+
+        // Mount video in isolated frame
+        const streamUrl = data.embedUrl || data.directUrl;
+        if (streamUrl) {
+          standbyBox.style.display = 'none';
+          videoFrame.style.display = 'block';
+          videoFrame.src = streamUrl;
+          bufferIndicator.textContent = 'Hardware Synced';
+        }
+      }
+
+      // Theater Mode Toggle
+      theaterBtn.addEventListener('click', () => {
+        monitorStage.classList.toggle('theater-mode');
+      });
+
+      // Fullscreen Toggle
+      fullscreenBtn.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          monitorStage.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      });
+
+      // Panic Mode / Camouflage
+      function togglePanic(forceState) {
+        isPanic = typeof forceState === 'boolean' ? forceState : !isPanic;
+        if (isPanic) {
+          decoyLayer.classList.add('active');
+          document.title = 'WebGL 3D Geometry Shader & Compute Benchmark v3.4.1';
+          // Blank video frame while disguised
+          if (videoFrame.src) {
+            videoFrame.dataset.tempSrc = videoFrame.src;
+            videoFrame.src = 'about:blank';
+          }
+          startDecoyAnimation();
+        } else {
+          decoyLayer.classList.remove('active');
+          document.title = (currentData && currentData.title) ? `${currentData.title} • Aether Studio` : 'Aether Studio • 4K Reference Player';
+          if (videoFrame.dataset.tempSrc) {
+            videoFrame.src = videoFrame.dataset.tempSrc;
+          }
+        }
+      }
+
+      panicBtn.addEventListener('click', () => togglePanic(true));
+      decoyExitBtn.addEventListener('click', () => togglePanic(false));
+
+      // Hotkeys
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          togglePanic();
+        } else if (e.key === 't' || e.key === 'T') {
+          if (!isPanic && e.target.tagName !== 'INPUT') {
+            monitorStage.classList.toggle('theater-mode');
+          }
+        } else if (e.key === 'f' || e.key === 'F') {
+          if (!isPanic && e.target.tagName !== 'INPUT') {
+            if (!document.fullscreenElement) monitorStage.requestFullscreen().catch(() => {});
+            else document.exitFullscreen().catch(() => {});
+          }
+        }
+      });
+
+      // Interactive switches
+      document.querySelectorAll('.switch-pill').forEach(pill => {
+        pill.addEventListener('click', () => pill.classList.toggle('active'));
+      });
+
+      // ── Innocent Wireframe 3D Benchmark Animation for Panic Mode ──
+      const canvas = document.getElementById('decoy-canvas');
+      const ctx = canvas.getContext('2d');
+      let animId = null;
+      let angleX = 0, angleY = 0;
+
+      function resizeCanvas() {
+        canvas.width = canvas.parentElement.clientWidth;
+        canvas.height = canvas.parentElement.clientHeight;
+      }
+      window.addEventListener('resize', resizeCanvas);
+
+      function startDecoyAnimation() {
+        resizeCanvas();
+        if (animId) cancelAnimationFrame(animId);
+
+        const nodes = [
+          [-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],
+          [-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1],
+          [0,-1.6,0],[0,1.6,0],[-1.6,0,0],[1.6,0,0],[0,0,-1.6],[0,0,1.6]
+        ];
+
+        const edges = [
+          [0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],
+          [0,4],[1,5],[2,6],[3,7],
+          [8,0],[8,1],[8,4],[8,5],[9,2],[9,3],[9,6],[9,7],
+          [10,0],[10,3],[10,4],[10,7],[11,1],[11,2],[11,5],[11,6],
+          [12,0],[12,1],[12,2],[12,3],[13,4],[13,5],[13,6],[13,7]
+        ];
+
+        function loop() {
+          if (!isPanic) return;
+          ctx.fillStyle = '#020617';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          angleX += 0.012;
+          angleY += 0.016;
+
+          const cx = canvas.width / 2;
+          const cy = canvas.height / 2;
+          const scale = Math.min(cx, cy) * 0.45;
+
+          const proj = nodes.map(([x, y, z]) => {
+            // Rot Y
+            let x1 = x * Math.cos(angleY) + z * Math.sin(angleY);
+            let z1 = -x * Math.sin(angleY) + z * Math.cos(angleY);
+            // Rot X
+            let y2 = y * Math.cos(angleX) - z1 * Math.sin(angleX);
+            let z2 = y * Math.sin(angleX) + z1 * Math.cos(angleX);
+
+            const dist = 3.5;
+            const factor = scale / (dist - z2);
+            return [cx + x1 * factor, cy + y2 * factor, z2];
+          });
+
+          ctx.strokeStyle = '#0EA5E9';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          edges.forEach(([i, j]) => {
+            ctx.moveTo(proj[i][0], proj[i][1]);
+            ctx.lineTo(proj[j][0], proj[j][1]);
+          });
+          ctx.stroke();
+
+          ctx.fillStyle = '#38BDF8';
+          proj.forEach(([px, py]) => {
+            ctx.beginPath();
+            ctx.arc(px, py, 3, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          animId = requestAnimationFrame(loop);
+        }
+        loop();
+      }
+
+      // Initialize
+      initFromUrl();
+    })();
+  </script>
+</body>
+</html>

@@ -40,6 +40,7 @@
   const modalLayer2Key = document.getElementById('modal-layer2-key');
   const modalCopyCloakBtn = document.getElementById('modal-copy-cloak-btn');
   const modalCloakAnchor = document.getElementById('modal-cloak-anchor');
+  const modalPlayerAnchor = document.getElementById('modal-player-anchor');
 
   // Utility Elements
   const toastEl = document.getElementById('toast');
@@ -297,11 +298,16 @@
       </div>
 
       <div class="card-actions">
+        <div class="card-primary-acts">
+          <a href="${item.playerUrl}" target="_blank" rel="noreferrer noopener" class="btn-player-primary" title="Launch Built-in 4K Studio Player">
+            <span>▶</span> Launch 4K Studio Player
+          </a>
+        </div>
         <button class="btn-cloak" data-id="${item.id}" title="Copy 2-Layer Cloaked URL">
-          <span>🔒</span> Copy 2-Layer Cloak
+          <span>🔒</span> Copy Cloak
         </button>
         <div class="card-sub-acts">
-          <button class="act" data-action="details" data-id="${item.id}">Details</button>
+          <button class="act" data-action="details" data-id="${item.id}">Keys</button>
           <a href="${item.cloakUrl}" target="_blank" rel="noreferrer noopener" class="act act-accent" title="Open 2-Layer Cloak decryptor">Cloak ↗</a>
         </div>
       </div>
@@ -463,6 +469,7 @@
 
     if (modalLayer1Key) modalLayer1Key.textContent = item.layer1Key;
     if (modalLayer2Key) modalLayer2Key.textContent = item.layer2Key;
+    if (modalPlayerAnchor) modalPlayerAnchor.href = item.playerUrl;
     if (modalCloakAnchor) modalCloakAnchor.href = item.cloakUrl;
     const modalCloakSub = document.getElementById('modal-cloak-sub');
     if (modalCloakSub) {

@@ -618,6 +618,37 @@ body {
   flex-wrap: wrap;
 }
 
+.card-primary-acts {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.btn-player-primary {
+  width: 100%;
+  background: linear-gradient(135deg, var(--veil-strong), var(--clay));
+  color: #FAF7F2 !important;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all .2s var(--ease);
+  box-shadow: 0 2px 8px rgba(107, 90, 160, 0.25);
+}
+
+.btn-player-primary:hover {
+  background: linear-gradient(135deg, var(--veil-hover), var(--terracotta));
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(107, 90, 160, 0.35);
+}
+
 .btn-incognito {
   background: var(--veil-strong);
   color: #fff !important;
