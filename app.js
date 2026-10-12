@@ -207,7 +207,8 @@
     const franchiseKeys = [
       'all', 'quintuplets', 'demon-slayer', 'chainsaw-man', 're-zero',
       'horimiya', '100-kanojo', 'overflow', 'roshidere', 'tomo-chan',
-      'frieren', 'jujutsu-kaisen', 'fruit-of-evolution', 'dress-up-darling', 'curated'
+      'frieren', 'jujutsu-kaisen', 'fruit-of-evolution', 'dress-up-darling',
+      'spy-x-family', 'curated'
     ];
 
     franchiseKeys.forEach((key) => {
