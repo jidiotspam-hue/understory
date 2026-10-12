@@ -260,7 +260,16 @@
 
   function renderCardHtml(item) {
     const badgesHtml = item.badges
-      .map((b) => `<span class="badge">${b}</span>`)
+      .map((b) => {
+        let cls = 'badge';
+        const bl = b.toLowerCase();
+        if (bl.includes('peh-koi') || bl.includes('studio') || bl.includes('master')) cls += ' badge-studio';
+        else if (bl.includes('pov')) cls += ' badge-pov';
+        else if (bl.includes('decensored') || bl.includes('uncensored')) cls += ' badge-decensored';
+        else if (bl.includes('3d')) cls += ' badge-3d';
+        else if (bl.includes('4k') || bl.includes('hd') || bl.includes('1080p') || bl.includes('60fps')) cls += ' badge-quality';
+        return `<span class="${cls}">${b}</span>`;
+      })
       .join('');
 
     return `

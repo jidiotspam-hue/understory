@@ -534,10 +534,77 @@ body {
 
 .badge {
   font-size: 11px;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border-radius: 4px;
   background: var(--raised);
   color: var(--muted);
+  border: 1px solid transparent;
+  transition: all .15s ease;
+}
+
+.badge-studio {
+  background: rgba(217, 119, 6, 0.12) !important;
+  color: #b45309 !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+  font-weight: 600;
+}
+
+.badge-pov {
+  background: rgba(45, 106, 79, 0.12) !important;
+  color: var(--moss) !important;
+  border-color: rgba(45, 106, 79, 0.35) !important;
+  font-weight: 600;
+}
+
+.badge-decensored {
+  background: rgba(193, 89, 40, 0.12) !important;
+  color: var(--terracotta) !important;
+  border-color: rgba(193, 89, 40, 0.35) !important;
+  font-weight: 600;
+}
+
+.badge-3d {
+  background: rgba(82, 109, 130, 0.12) !important;
+  color: #3b5062 !important;
+  border-color: rgba(82, 109, 130, 0.35) !important;
+  font-weight: 600;
+}
+
+.badge-quality {
+  background: rgba(16, 185, 129, 0.12) !important;
+  color: #047857 !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .badge-studio {
+  background: rgba(245, 158, 11, 0.18) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.45) !important;
+}
+
+[data-theme="dark"] .badge-pov {
+  background: rgba(52, 211, 153, 0.18) !important;
+  color: #6ee7b7 !important;
+  border-color: rgba(52, 211, 153, 0.45) !important;
+}
+
+[data-theme="dark"] .badge-decensored {
+  background: rgba(251, 113, 133, 0.18) !important;
+  color: #fda4af !important;
+  border-color: rgba(251, 113, 133, 0.45) !important;
+}
+
+[data-theme="dark"] .badge-3d {
+  background: rgba(147, 197, 253, 0.18) !important;
+  color: #93c5fd !important;
+  border-color: rgba(147, 197, 253, 0.45) !important;
+}
+
+[data-theme="dark"] .badge-quality {
+  background: rgba(110, 231, 183, 0.18) !important;
+  color: #a7f3d0 !important;
+  border-color: rgba(110, 231, 183, 0.45) !important;
 }
 
 /* ── Card Buttons Row ── */
