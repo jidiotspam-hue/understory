@@ -187,7 +187,7 @@
       width: 100%;
       height: 100%;
       border: 0;
-      display: block;
+      display: none;
       background: #000;
     }
 
@@ -204,6 +204,7 @@
       text-align: center;
       padding: 24px;
       background: var(--raised);
+      overflow-y: auto;
     }
 
     /* Audio Mute Overlay Curtain */
@@ -287,6 +288,10 @@
       color: var(--bad);
     }
 
+    .act-accent {
+      color: var(--veil-strong);
+    }
+
     .meta-deck {
       display: flex;
       align-items: center;
@@ -329,6 +334,20 @@
       font-family: var(--font-mono);
       font-size: 11.5px;
       color: var(--ink);
+    }
+
+    /* Selector dropdown in standby */
+    .vault-selector {
+      background: var(--paper);
+      color: var(--ink);
+      border: 1px solid var(--rule);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font: inherit;
+      font-size: 13.5px;
+      width: 100%;
+      max-width: 380px;
+      cursor: pointer;
     }
 
     /* ── Decoy Camouflage Screen ── */
@@ -404,12 +423,18 @@
       <span id="mute-text-hud">Muted</span>
     </div>
 
+    <!-- Standby & In-Player Selector -->
     <div id="standby-box" class="standby-box">
-      <p>Waiting for encrypted stream…</p>
-      <a href="index.html" class="act act-strong">← Open vault archive</a>
+      <p id="standby-msg" style="font-size: 15px; font-weight: 600; color: var(--ink);">Select a title to stream</p>
+      <select id="title-picker" class="vault-selector" aria-label="Select title to play">
+        <option value="">Choose from vault (47 titles)…</option>
+      </select>
+      <div style="display: flex; gap: 14px; margin-top: 6px;">
+        <a href="index.html" class="act act-strong">← Open vault archive</a>
+      </div>
     </div>
 
-    <iframe id="video-frame" class="player-frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen hidden></iframe>
+    <iframe id="video-frame" class="player-frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen referrerpolicy="no-referrer"></iframe>
   </div>
 
   <!-- Minimalist Controls Deck -->
@@ -419,6 +444,16 @@
       <button id="mute-btn" type="button" class="act act-strong" title="Toggle audio mute (M)">
         <span id="mute-icon">🔊</span>
         <span id="mute-label">Sound On</span>
+      </button>
+
+      <!-- Direct Fallback Link (If frame is blocked by adblock) -->
+      <a id="direct-stream-btn" href="#" target="_blank" rel="noreferrer noopener" class="act act-accent" title="Open stream directly if embedded player is blocked" hidden>
+        <span>↗</span> Open Stream
+      </a>
+
+      <!-- Switch Video Dropdown Button -->
+      <button id="switch-video-btn" type="button" class="act" title="Switch video title">
+        <span>☰</span> Switch
       </button>
 
       <!-- Cinema Theater Mode -->
@@ -467,12 +502,16 @@
   </div>
 </div>
 
+<script src="data.js"></script>
 <script>
   (() => {
     const MAGIC_PLAIN = 0x01;
+    const PBKDF2_ITERATIONS = 250000;
 
     const playerWrap = document.getElementById('player-wrap');
     const standbyBox = document.getElementById('standby-box');
+    const standbyMsg = document.getElementById('standby-msg');
+    const titlePicker = document.getElementById('title-picker');
     const videoFrame = document.getElementById('video-frame');
     const muteBtn = document.getElementById('mute-btn');
     const muteIcon = document.getElementById('mute-icon');
@@ -480,6 +519,8 @@
     const muteIndicator = document.getElementById('mute-indicator');
     const muteIconHud = document.getElementById('mute-icon-hud');
     const muteTextHud = document.getElementById('mute-text-hud');
+    const directStreamBtn = document.getElementById('direct-stream-btn');
+    const switchVideoBtn = document.getElementById('switch-video-btn');
     const theaterBtn = document.getElementById('theater-btn');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
     const panicBtn = document.getElementById('panic-btn');
@@ -493,6 +534,7 @@
     let isMuted = false;
     let isPanic = false;
     let muteTimer = null;
+    let vaultItems = [];
 
     // Theme initialization
     const savedTheme = localStorage.getItem('understory_theme');
@@ -506,7 +548,7 @@
       localStorage.setItem('understory_theme', next);
     });
 
-    // ── Web Crypto Decryption (AES-256-GCM) ──
+    // ── Web Crypto Decryption ──
     const b64 = {
       decode(str) {
         str = str.replace(/-/g, '+').replace(/_/g, '/');
@@ -528,15 +570,68 @@
         const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipherBytes);
         return JSON.parse(new TextDecoder().decode(plain));
       }
-      // Fallback for unencrypted raw JSON
       const plainText = new TextDecoder().decode(bytes);
       return JSON.parse(plainText);
     }
 
+    async function decryptVaultWithKey(cipherB64, passphrase) {
+      const bytes = b64.decode(cipherB64);
+      const salt = bytes.slice(1, 17);
+      const iv = bytes.slice(17, 29);
+      const cipherBytes = bytes.slice(29);
+      const baseKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+      const key = await crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+        baseKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['decrypt']
+      );
+      const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipherBytes);
+      return JSON.parse(new TextDecoder().decode(plain));
+    }
+
+    // Populate title picker if vault data exists
+    async function loadCatalog() {
+      if (window.ENCRYPTED_VAULT) {
+        try {
+          vaultItems = await decryptVaultWithKey(window.ENCRYPTED_VAULT, 'tqq');
+          titlePicker.innerHTML = '<option value="">Choose from vault (47 titles)…</option>';
+          vaultItems.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.id;
+            opt.textContent = `${v.franchiseName || v.franchise}: ${v.title}`;
+            titlePicker.appendChild(opt);
+          });
+        } catch (e) {
+          console.warn('Could not auto-decrypt catalog with tqq', e);
+        }
+      }
+    }
+
+    titlePicker.addEventListener('change', (e) => {
+      const id = e.target.value;
+      if (!id) return;
+      const found = vaultItems.find(v => v.id === id);
+      if (found) {
+        mountStream(found);
+      }
+    });
+
+    switchVideoBtn.addEventListener('click', () => {
+      standbyBox.style.display = 'flex';
+      videoFrame.style.display = 'none';
+      standbyMsg.textContent = 'Switch Video Stream:';
+      titlePicker.focus();
+    });
+
     async function initFromUrl() {
+      await loadCatalog();
+
       const hash = window.location.hash;
       if (hash && hash.startsWith('#v=')) {
         try {
+          statusLine.textContent = 'Decrypting in-memory stream...';
           const rawHash = hash.slice(3);
           const data = await decryptPayload(rawHash);
           currentItem = data;
@@ -547,22 +642,33 @@
           mountStream(data);
         } catch (err) {
           console.error('Failed to decrypt payload:', err);
-          statusLine.textContent = 'Could not decrypt stream. Please relaunch from vault.';
+          statusLine.textContent = 'Could not decrypt stream. Please select a title below.';
+          standbyBox.style.display = 'flex';
         }
+      } else {
+        // No hash provided: show standby picker
+        standbyBox.style.display = 'flex';
       }
     }
 
     function mountStream(item) {
       if (!item) return;
+      currentItem = item;
       mediaTitle.textContent = item.title || 'Studio Stream';
       statusLine.textContent = `${item.franchise ? item.franchise + ' • ' : ''}Encrypted in-memory stream active. Zero history trace.`;
       document.title = `${item.title || 'Stream'} • understory`;
 
       const streamUrl = item.embedUrl || item.directUrl;
       if (streamUrl) {
-        standbyBox.hidden = true;
-        videoFrame.hidden = false;
+        standbyBox.style.display = 'none';
+        videoFrame.style.display = 'block';
+        videoFrame.setAttribute('referrerpolicy', 'no-referrer');
         videoFrame.src = streamUrl;
+
+        if (directStreamBtn) {
+          directStreamBtn.href = item.directUrl || streamUrl;
+          directStreamBtn.hidden = false;
+        }
       }
     }
 
@@ -643,7 +749,7 @@
 
     // Keyboard Shortcuts
     window.addEventListener('keydown', (e) => {
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
 
       if (e.key === 'Escape') {
         togglePanic();
