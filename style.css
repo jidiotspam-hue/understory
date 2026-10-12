@@ -1094,3 +1094,108 @@ body {
   color: var(--bad);
   font-size: 13.5px;
 }
+
+/* ── Quick Jump Character Bar ── */
+.character-quick-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 6px 0 10px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.character-quick-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.quick-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+  font-family: var(--font-body);
+}
+
+.quick-tag {
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 12px;
+  font-family: var(--font-body);
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s var(--ease);
+}
+
+.quick-tag:hover {
+  background: var(--paper);
+  border-color: var(--veil);
+  color: var(--veil-strong);
+}
+
+.quick-tag.active {
+  background: var(--veil);
+  color: #fff;
+  border-color: var(--veil-strong);
+}
+
+/* ── Sort & Timer Controls ── */
+.sort-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sort-select {
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  color: var(--ink);
+  font-size: 12px;
+  font-family: var(--font-body);
+  padding: 5px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.session-timer {
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: var(--muted);
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  padding: 4px 8px;
+  border-radius: 6px;
+  user-select: none;
+}
+
+/* ── Favorite Star Button on Cards ── */
+.star-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--faint);
+  transition: color .2s var(--ease), transform .15s var(--ease);
+  padding: 2px 4px;
+}
+
+.star-btn:hover {
+  transform: scale(1.15);
+  color: var(--terracotta);
+}
+
+.star-btn.starred {
+  color: #F59E0B;
+  text-shadow: 0 0 6px rgba(245, 158, 11, 0.4);
+}

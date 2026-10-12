@@ -87,8 +87,24 @@
           <button id="clear-search" class="clear-btn" hidden aria-label="Clear search">×</button>
         </div>
 
+        <!-- Quick Jump Character Bar -->
+        <div class="character-quick-bar" id="character-quick-bar">
+          <span class="quick-label">⚡ Quick Jump:</span>
+          <button class="quick-tag" data-tag="quintuplets">Nakano Quintuplets</button>
+          <button class="quick-tag" data-tag="itsuki">Itsuki</button>
+          <button class="quick-tag" data-tag="miku">Miku</button>
+          <button class="quick-tag" data-tag="nino">Nino</button>
+          <button class="quick-tag" data-tag="yor">Yor Forger</button>
+          <button class="quick-tag" data-tag="marin">Marin</button>
+          <button class="quick-tag" data-tag="fern">Fern</button>
+          <button class="quick-tag" data-tag="mitsuri">Mitsuri</button>
+          <button class="quick-tag" data-tag="makima">Makima</button>
+          <button class="quick-tag" data-tag="2b">2B</button>
+        </div>
+
         <nav class="filter-bar" id="filter-bar" aria-label="Filter by franchise">
           <button class="filter-chip active" data-filter="all">All <span class="count" id="count-all">51</span></button>
+          <button class="filter-chip" data-filter="favorites" id="chip-favorites">⭐ Favorites <span class="count" id="count-favorites">0</span></button>
           <button class="filter-chip" data-filter="quintuplets">Quintuplets <span class="count" id="count-quintuplets">15</span></button>
           <button class="filter-chip" data-filter="demon-slayer">Demon Slayer <span class="count" id="count-demon-slayer">6</span></button>
           <button class="filter-chip" data-filter="chainsaw-man">Chainsaw Man <span class="count" id="count-chainsaw-man">2</span></button>
@@ -130,10 +146,22 @@
         </div>
       </section>
 
-      <!-- Global Batch Actions -->
+      <!-- Global Batch Actions & Sorting -->
       <section class="batch-bar">
-        <span class="batch-label" id="results-count">51 titles found</span>
+        <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+          <span class="batch-label" id="results-count">51 titles found</span>
+          <div class="sort-wrap">
+            <label for="sort-select" class="sort-label">Sort:</label>
+            <select id="sort-select" class="sort-select" aria-label="Sort video titles">
+              <option value="default">Curated Order</option>
+              <option value="top-picks">Top Picks First ⭐</option>
+              <option value="title-asc">Title (A → Z)</option>
+              <option value="franchise">Franchise (A → Z)</option>
+            </select>
+          </div>
+        </div>
         <div class="batch-buttons">
+          <span id="session-timer" class="session-timer" title="Session auto-locks after inactivity">⏱️ 15:00</span>
           <button id="copy-layer1-btn" class="act act-accent" title="Copy Layer 1 Key">Copy L1 Key</button>
           <button id="copy-layer2-btn" class="act act-accent" title="Copy Layer 2 Key">Copy L2 Key</button>
           <button id="copy-all-cloak" class="act act-strong" title="Copy all matching 2-Layer cloaked URLs">Copy All Cloak URLs</button>

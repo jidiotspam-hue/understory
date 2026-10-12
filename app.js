@@ -11,6 +11,13 @@
   let activeGroupMode = 'type'; // 'type' | 'franchise' | 'none'
   let searchQuery = '';
   let selectedVideo = null;
+  let sortMode = 'default';
+  let favorites = [];
+  try {
+    favorites = JSON.parse(localStorage.getItem('understory_favorites') || '[]');
+  } catch (e) {
+    favorites = [];
+  }
 
   // Vault Gate Elements
   const vaultLockedView = document.getElementById('vault-locked-view');
@@ -29,6 +36,9 @@
   const typeFilterChips = document.querySelectorAll('#type-filter-bar .filter-chip');
   const modeButtons = document.querySelectorAll('.mode-btn');
   const resultsCount = document.getElementById('results-count');
+  const sortSelect = document.getElementById('sort-select');
+  const sessionTimerEl = document.getElementById('session-timer');
+  const characterQuickBar = document.getElementById('character-quick-bar');
 
   // Modal Elements
   const shieldDialog = document.getElementById('shield-dialog');
@@ -51,6 +61,60 @@
   const copyLayer1Btn = document.getElementById('copy-layer1-btn');
   const copyLayer2Btn = document.getElementById('copy-layer2-btn');
   const copyAllCloakBtn = document.getElementById('copy-all-cloak');
+
+  // ── Session Auto-Lock Inactivity Timer ──
+  let sessionRemaining = 900; // 15 minutes
+  let sessionInterval = null;
+  let lastActivityTimestamp = Date.now();
+
+  function updateTimerDisplay() {
+    if (!sessionTimerEl) return;
+    if (VIDEO_DATA.length === 0) {
+      sessionTimerEl.textContent = '⏱️ Locked';
+      return;
+    }
+    const mins = Math.floor(sessionRemaining / 60);
+    const secs = sessionRemaining % 60;
+    sessionTimerEl.textContent = `⏱️ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }
+
+  function startSessionTimer() {
+    if (sessionInterval) clearInterval(sessionInterval);
+    sessionRemaining = 900;
+    updateTimerDisplay();
+    sessionInterval = setInterval(() => {
+      sessionRemaining--;
+      updateTimerDisplay();
+      if (sessionRemaining <= 0) {
+        clearInterval(sessionInterval);
+        sessionInterval = null;
+        lockVault();
+        showToast('Session timed out. Vault locked.');
+      }
+    }, 1000);
+  }
+
+  function stopSessionTimer() {
+    if (sessionInterval) {
+      clearInterval(sessionInterval);
+      sessionInterval = null;
+    }
+    updateTimerDisplay();
+  }
+
+  function onUserActivity() {
+    if (VIDEO_DATA.length === 0) return;
+    const now = Date.now();
+    if (now - lastActivityTimestamp > 1000) {
+      lastActivityTimestamp = now;
+      sessionRemaining = 900;
+      updateTimerDisplay();
+    }
+  }
+
+  ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach((evt) => {
+    window.addEventListener(evt, onUserActivity, { passive: true });
+  });
 
   // ── Web Crypto Decryption ──
   const b64 = {
@@ -120,6 +184,7 @@
 
       updateFilterCounts();
       render();
+      startSessionTimer();
       showToast('Vault unlocked successfully');
     } catch (err) {
       vaultErr.hidden = false;
@@ -134,6 +199,7 @@
   function lockVault() {
     VIDEO_DATA = [];
     sessionStorage.removeItem('understory_session_pass');
+    stopSessionTimer();
     vaultUnlockedView.hidden = true;
     vaultLockedView.hidden = false;
     vaultPassInput.value = '';
@@ -220,6 +286,11 @@
       if (el) el.textContent = count;
     });
 
+    const favCountEl = document.getElementById('count-favorites');
+    if (favCountEl) {
+      favCountEl.textContent = favorites.length;
+    }
+
     const typeKeys = [
       'all', '3d-animation', '2d-anime', 'compilation', 'ensemble', 'solo', 'portal'
     ];
@@ -233,12 +304,41 @@
     });
   }
 
-  // ── Filter & Search Logic ──
+  // ── Favorites State Management ──
+  function toggleFavorite(id) {
+    const idx = favorites.indexOf(id);
+    const added = idx === -1;
+    if (added) {
+      favorites.push(id);
+    } else {
+      favorites.splice(idx, 1);
+    }
+    try {
+      localStorage.setItem('understory_favorites', JSON.stringify(favorites));
+    } catch (e) {}
+
+    updateFilterCounts();
+    if (activeFilter === 'favorites') {
+      render();
+    } else {
+      const btns = document.querySelectorAll(`.star-btn[data-fav-id="${id}"]`);
+      btns.forEach((btn) => {
+        btn.classList.toggle('starred', added);
+        btn.textContent = added ? '★' : '☆';
+        btn.title = added ? 'Remove from favorites' : 'Add to favorites';
+      });
+    }
+    showToast(added ? 'Added to favorites ⭐' : 'Removed from favorites');
+  }
+
+  // ── Filter & Search Logic with Sorting ──
   function getFilteredVideos() {
-    return VIDEO_DATA.filter((v) => {
-      const matchesFranchise =
-        activeFilter === 'all' || v.franchise === activeFilter;
-      if (!matchesFranchise) return false;
+    const filtered = VIDEO_DATA.filter((v) => {
+      if (activeFilter === 'favorites') {
+        if (!favorites.includes(v.id)) return false;
+      } else if (activeFilter !== 'all' && v.franchise !== activeFilter) {
+        return false;
+      }
 
       const matchesType =
         activeTypeFilter === 'all' || v.type === activeTypeFilter;
@@ -257,9 +357,29 @@
 
       return titleMatch || fullTitleMatch || franchiseMatch || typeMatch || tagMatch || charMatch || badgeMatch;
     });
+
+    const list = [...filtered];
+    if (sortMode === 'top-picks') {
+      list.sort((a, b) => {
+        const aFav = favorites.includes(a.id) ? 1 : 0;
+        const bFav = favorites.includes(b.id) ? 1 : 0;
+        if (aFav !== bFav) return bFav - aFav;
+        const aTop = (a.userTag.includes('Top') || a.badges.some((bg) => bg.includes('Top') || bg.includes('Peh-Koi'))) ? 1 : 0;
+        const bTop = (b.userTag.includes('Top') || b.badges.some((bg) => bg.includes('Top') || bg.includes('Peh-Koi'))) ? 1 : 0;
+        if (aTop !== bTop) return bTop - aTop;
+        return 0;
+      });
+    } else if (sortMode === 'title-asc') {
+      list.sort((a, b) => a.title.localeCompare(b.title));
+    } else if (sortMode === 'franchise') {
+      list.sort((a, b) => a.franchiseName.localeCompare(b.franchiseName) || a.title.localeCompare(b.title));
+    }
+
+    return list;
   }
 
   function renderCardHtml(item) {
+    const isFav = favorites.includes(item.id);
     const badgesHtml = item.badges
       .map((b) => {
         let cls = 'badge';
@@ -278,7 +398,12 @@
       <div class="card-header">
         <div class="card-topline">
           <span class="card-franchise">${item.franchiseName}</span>
-          <span class="badge" style="background:var(--terracotta);color:#fff;font-weight:600;">${item.typeName || 'Feature'}</span>
+          <div style="display:inline-flex;align-items:center;gap:6px;">
+            <span class="badge" style="background:var(--terracotta);color:#fff;font-weight:600;">${item.typeName || 'Feature'}</span>
+            <button class="star-btn ${isFav ? 'starred' : ''}" data-fav-id="${item.id}" title="${isFav ? 'Remove from favorites' : 'Add to favorites'}" aria-label="Toggle favorite">
+              ${isFav ? '★' : '☆'}
+            </button>
+          </div>
         </div>
         <h2 class="card-title">${item.title}</h2>
         <p class="card-meta">
@@ -455,6 +580,15 @@
         openShieldModal(id);
       });
     });
+
+    // Favorite Star button
+    cardsContainer.querySelectorAll('.star-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-fav-id');
+        if (id) toggleFavorite(id);
+      });
+    });
   }
 
   // ── Shield Modal ──
@@ -511,10 +645,48 @@
     );
   });
 
+  // ── Quick Jump Character Bar ──
+  function syncQuickTags() {
+    if (!characterQuickBar) return;
+    characterQuickBar.querySelectorAll('.quick-tag').forEach((b) => {
+      const tag = b.getAttribute('data-tag').toLowerCase();
+      b.classList.toggle('active', !!searchQuery && searchQuery.toLowerCase().includes(tag));
+    });
+  }
+
+  if (characterQuickBar) {
+    characterQuickBar.querySelectorAll('.quick-tag').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tag = btn.getAttribute('data-tag');
+        if (searchQuery.toLowerCase() === tag.toLowerCase()) {
+          searchQuery = '';
+          searchInput.value = '';
+          clearSearchBtn.hidden = true;
+          btn.classList.remove('active');
+        } else {
+          searchQuery = tag;
+          searchInput.value = tag;
+          clearSearchBtn.hidden = false;
+          characterQuickBar.querySelectorAll('.quick-tag').forEach((b) => b.classList.toggle('active', b === btn));
+        }
+        render();
+      });
+    });
+  }
+
+  // ── Sort Control ──
+  if (sortSelect) {
+    sortSelect.addEventListener('change', (e) => {
+      sortMode = e.target.value;
+      render();
+    });
+  }
+
   // ── Global Search & Filters ──
   searchInput.addEventListener('input', (e) => {
     searchQuery = e.target.value.trim();
     clearSearchBtn.hidden = !searchQuery;
+    syncQuickTags();
     render();
   });
 
@@ -522,6 +694,7 @@
     searchInput.value = '';
     searchQuery = '';
     clearSearchBtn.hidden = true;
+    syncQuickTags();
     searchInput.focus();
     render();
   });

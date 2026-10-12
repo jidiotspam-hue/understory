@@ -183,6 +183,15 @@
       border-right: none;
     }
 
+    .player-wrap.ratio-21-9 {
+      aspect-ratio: 21 / 9;
+    }
+
+    .player-wrap.ratio-fit {
+      aspect-ratio: auto;
+      height: 72vh;
+    }
+
     .player-frame {
       width: 100%;
       height: 100%;
@@ -426,6 +435,16 @@
         <span id="mute-label">Sound On</span>
       </button>
 
+      <!-- Aspect Ratio Switcher -->
+      <button id="aspect-btn" type="button" class="act" title="Switch aspect ratio (A)">
+        <span>📐</span> <span id="aspect-label">16:9</span>
+      </button>
+
+      <!-- Pop-out Window -->
+      <button id="pip-btn" type="button" class="act" title="Pop-out player window (P)">
+        <span>🗗</span> Pop-out
+      </button>
+
       <!-- Direct Fallback Link (If frame is blocked by adblock) -->
       <a id="direct-stream-btn" href="#" target="_blank" rel="noreferrer noopener" class="act act-accent" title="Open stream directly if embedded player is blocked" hidden>
         <span>↗</span> Open Stream
@@ -439,6 +458,11 @@
       <!-- Fullscreen -->
       <button id="fullscreen-btn" type="button" class="act" title="Fullscreen (F)">
         <span>🖥</span> Fullscreen
+      </button>
+
+      <!-- Auto-Disguise on Blur Toggle -->
+      <button id="auto-disguise-btn" type="button" class="act" title="Auto-hide when switching tabs or apps (H)">
+        <span>👁️</span> <span id="auto-disguise-label">Auto-Hide: Off</span>
       </button>
 
       <!-- Back to Archive -->
@@ -456,7 +480,7 @@
     </div>
   </div>
 
-  <p class="hint">Shortcuts: <kbd>M</kbd> Mute • <kbd>T</kbd> Theater • <kbd>F</kbd> Fullscreen • <kbd>Esc</kbd> Disguise</p>
+  <p class="hint">Shortcuts: <kbd>M</kbd> Mute • <kbd>T</kbd> Theater • <kbd>F</kbd> Fullscreen • <kbd>A</kbd> Aspect • <kbd>P</kbd> Pop-out • <kbd>H</kbd> Auto-Hide • <kbd>Esc</kbd> Disguise</p>
 </main>
 
 <!-- Camouflage Decoy Screen -->
@@ -493,6 +517,11 @@
     const directStreamBtn = document.getElementById('direct-stream-btn');
     const theaterBtn = document.getElementById('theater-btn');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const aspectBtn = document.getElementById('aspect-btn');
+    const aspectLabel = document.getElementById('aspect-label');
+    const pipBtn = document.getElementById('pip-btn');
+    const autoDisguiseBtn = document.getElementById('auto-disguise-btn');
+    const autoDisguiseLabel = document.getElementById('auto-disguise-label');
     const panicBtn = document.getElementById('panic-btn');
     const decoyView = document.getElementById('decoy-view');
     const decoyExitBtn = document.getElementById('decoy-exit-btn');
@@ -640,6 +669,64 @@
       }
     });
 
+    // Aspect Ratio Switcher
+    const ratios = ['16:9', '21:9', 'Fit'];
+    let currentRatioIdx = 0;
+
+    function setAspectRatio(ratio) {
+      playerWrap.classList.remove('ratio-21-9', 'ratio-fit');
+      if (ratio === '21:9') {
+        playerWrap.classList.add('ratio-21-9');
+      } else if (ratio === 'Fit') {
+        playerWrap.classList.add('ratio-fit');
+      }
+      if (aspectLabel) aspectLabel.textContent = ratio;
+    }
+
+    function cycleAspectRatio() {
+      currentRatioIdx = (currentRatioIdx + 1) % ratios.length;
+      setAspectRatio(ratios[currentRatioIdx]);
+    }
+
+    if (aspectBtn) aspectBtn.addEventListener('click', cycleAspectRatio);
+
+    // Picture-in-Picture / Pop-out Window
+    function openPopOut() {
+      if (!currentItem) return;
+      const url = currentItem.embedUrl || currentItem.directUrl;
+      if (!url) return;
+      const w = 960;
+      const h = 540;
+      const left = Math.max(0, Math.floor((screen.width - w) / 2));
+      const top = Math.max(0, Math.floor((screen.height - h) / 2));
+      window.open(url, 'understory_cinema_popout', `width=${w},height=${h},left=${left},top=${top},status=no,menubar=no,toolbar=no`);
+    }
+
+    if (pipBtn) pipBtn.addEventListener('click', openPopOut);
+
+    // Auto-Disguise on Tab Blur
+    let autoDisguiseEnabled = localStorage.getItem('understory_autodisguise') === 'true';
+
+    function updateAutoDisguiseUI() {
+      if (autoDisguiseLabel) autoDisguiseLabel.textContent = autoDisguiseEnabled ? 'Auto-Hide: On' : 'Auto-Hide: Off';
+      if (autoDisguiseBtn) autoDisguiseBtn.classList.toggle('act-strong', autoDisguiseEnabled);
+    }
+
+    function toggleAutoDisguise() {
+      autoDisguiseEnabled = !autoDisguiseEnabled;
+      localStorage.setItem('understory_autodisguise', autoDisguiseEnabled);
+      updateAutoDisguiseUI();
+    }
+
+    if (autoDisguiseBtn) autoDisguiseBtn.addEventListener('click', toggleAutoDisguise);
+    updateAutoDisguiseUI();
+
+    window.addEventListener('blur', () => {
+      if (autoDisguiseEnabled && !isPanic && videoFrame.style.display !== 'none') {
+        togglePanic(true);
+      }
+    });
+
     // Panic Disguise Mode
     function togglePanic(forceState) {
       isPanic = typeof forceState === 'boolean' ? forceState : !isPanic;
@@ -675,6 +762,12 @@
       } else if (e.key === 'f' || e.key === 'F') {
         if (!document.fullscreenElement) playerWrap.requestFullscreen().catch(() => {});
         else document.exitFullscreen().catch(() => {});
+      } else if (e.key === 'a' || e.key === 'A') {
+        cycleAspectRatio();
+      } else if (e.key === 'p' || e.key === 'P') {
+        openPopOut();
+      } else if (e.key === 'h' || e.key === 'H') {
+        toggleAutoDisguise();
       }
     });
 
