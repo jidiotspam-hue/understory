@@ -161,8 +161,30 @@
     }
 
     /* ── Player Stage ── */
+    .player-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .ambient-glow {
+      position: absolute;
+      inset: -12px -12px -16px -12px;
+      border-radius: 18px;
+      background: radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.35) 0%, rgba(236, 72, 153, 0.2) 40%, transparent 75%);
+      filter: blur(28px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .5s var(--ease);
+      z-index: 0;
+    }
+
+    .ambient-glow.active {
+      opacity: 0.95;
+    }
+
     .player-wrap {
       position: relative;
+      z-index: 1;
       width: 100%;
       aspect-ratio: 16 / 9;
       background: #000;
@@ -171,6 +193,28 @@
       overflow: hidden;
       box-shadow: 0 4px 24px rgba(0,0,0,0.12);
       transition: all .25s var(--ease);
+    }
+
+    body.lights-off {
+      background: #06050b !important;
+    }
+
+    body.lights-off .head,
+    body.lights-off .controls-deck,
+    body.lights-off .hint {
+      opacity: 0.22;
+      transition: opacity .3s ease;
+    }
+
+    body.lights-off .head:hover,
+    body.lights-off .controls-deck:hover,
+    body.lights-off .hint:hover {
+      opacity: 1;
+    }
+
+    body.lights-off .ambient-glow.active {
+      opacity: 1;
+      filter: blur(36px);
     }
 
     .player-wrap.theater {
@@ -410,20 +454,23 @@
     <p class="statusline" id="status-line">In-memory 4K cinema stream. Encrypted, zero history trace.</p>
   </header>
 
-  <!-- Player Stage -->
-  <div id="player-wrap" class="player-wrap">
-    <div id="mute-indicator" class="mute-indicator-overlay">
-      <span id="mute-icon-hud">🔇</span>
-      <span id="mute-text-hud">Muted</span>
-    </div>
+  <!-- Player Stage Container with Ambient Cinema Glow -->
+  <div class="player-container">
+    <div id="ambient-glow" class="ambient-glow"></div>
+    <div id="player-wrap" class="player-wrap">
+      <div id="mute-indicator" class="mute-indicator-overlay">
+        <span id="mute-icon-hud">🔇</span>
+        <span id="mute-text-hud">Muted</span>
+      </div>
 
-    <!-- Innocent Standby Screen -->
-    <div id="standby-box" class="standby-box">
-      <p style="font-size: 14.5px; color: var(--muted);">Waiting for encrypted stream…</p>
-      <a href="index.html" class="act act-strong">← Open vault archive</a>
-    </div>
+      <!-- Innocent Standby Screen -->
+      <div id="standby-box" class="standby-box">
+        <p style="font-size: 14.5px; color: var(--muted);">Waiting for encrypted stream…</p>
+        <a href="index.html" class="act act-strong">← Open vault archive</a>
+      </div>
 
-    <iframe id="video-frame" class="player-frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen referrerpolicy="no-referrer"></iframe>
+      <iframe id="video-frame" class="player-frame" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen referrerpolicy="no-referrer"></iframe>
+    </div>
   </div>
 
   <!-- Minimalist Controls Deck -->
@@ -438,6 +485,11 @@
       <!-- Aspect Ratio Switcher -->
       <button id="aspect-btn" type="button" class="act" title="Switch aspect ratio (A)">
         <span>📐</span> <span id="aspect-label">16:9</span>
+      </button>
+
+      <!-- Cinema Lights Dimmer -->
+      <button id="lights-btn" type="button" class="act" title="Cinema lights dim (L)">
+        <span>💡</span> <span id="lights-label">Lights: On</span>
       </button>
 
       <!-- Pop-out Window -->
@@ -485,7 +537,7 @@
     </div>
   </div>
 
-  <p class="hint">Shortcuts: <kbd>M</kbd> Mute • <kbd>↑</kbd><kbd>↓</kbd> Volume • <kbd>T</kbd> Theater • <kbd>F</kbd> Fullscreen • <kbd>A</kbd> Aspect • <kbd>P</kbd> Pop-out • <kbd>Z</kbd> Sleep • <kbd>H</kbd> Auto-Hide • <kbd>Esc</kbd> Disguise</p>
+  <p class="hint">Shortcuts: <kbd>M</kbd> Mute • <kbd>↑</kbd><kbd>↓</kbd> Volume • <kbd>L</kbd> Lights • <kbd>T</kbd> Theater • <kbd>F</kbd> Fullscreen • <kbd>A</kbd> Aspect • <kbd>P</kbd> Pop-out • <kbd>Z</kbd> Sleep • <kbd>H</kbd> Auto-Hide • <kbd>Esc</kbd> Disguise</p>
 </main>
 
 <!-- Camouflage Decoy Screen -->
@@ -523,6 +575,9 @@
     const directStreamBtn = document.getElementById('direct-stream-btn');
     const theaterBtn = document.getElementById('theater-btn');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const ambientGlow = document.getElementById('ambient-glow');
+    const lightsBtn = document.getElementById('lights-btn');
+    const lightsLabel = document.getElementById('lights-label');
     const aspectBtn = document.getElementById('aspect-btn');
     const aspectLabel = document.getElementById('aspect-label');
     const pipBtn = document.getElementById('pip-btn');
@@ -540,7 +595,17 @@
     let currentItem = null;
     let isMuted = false;
     let isPanic = false;
+    let isLightsOff = false;
     let muteTimer = null;
+
+    function toggleLights(force) {
+      isLightsOff = typeof force === 'boolean' ? force : !isLightsOff;
+      document.body.classList.toggle('lights-off', isLightsOff);
+      if (lightsLabel) lightsLabel.textContent = isLightsOff ? 'Lights: Off' : 'Lights: On';
+      if (lightsBtn) lightsBtn.classList.toggle('act-accent', isLightsOff);
+    }
+
+    if (lightsBtn) lightsBtn.addEventListener('click', () => toggleLights());
 
     // Theme initialization
     const savedTheme = localStorage.getItem('understory_theme');
@@ -616,6 +681,7 @@
         videoFrame.style.display = 'block';
         videoFrame.setAttribute('referrerpolicy', 'no-referrer');
         videoFrame.src = streamUrl;
+        if (ambientGlow) ambientGlow.classList.add('active');
 
         if (directStreamBtn) {
           directStreamBtn.href = item.directUrl || streamUrl;
@@ -806,6 +872,7 @@
       isPanic = typeof forceState === 'boolean' ? forceState : !isPanic;
       if (isPanic) {
         decoyView.classList.add('active');
+        if (ambientGlow) ambientGlow.classList.remove('active');
         document.title = 'Notes & Drafts';
         if (videoFrame.src) {
           videoFrame.dataset.tempSrc = videoFrame.src;
@@ -813,6 +880,7 @@
         }
       } else {
         decoyView.classList.remove('active');
+        if (ambientGlow && currentItem) ambientGlow.classList.add('active');
         document.title = (currentItem && currentItem.title) ? `${currentItem.title} • understory` : 'understory • player';
         if (videoFrame.dataset.tempSrc) {
           videoFrame.src = videoFrame.dataset.tempSrc;
@@ -837,6 +905,8 @@
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         adjustVolume(-10);
+      } else if (e.key === 'l' || e.key === 'L') {
+        toggleLights();
       } else if (e.key === 't' || e.key === 'T') {
         playerWrap.classList.toggle('theater');
       } else if (e.key === 'f' || e.key === 'F') {

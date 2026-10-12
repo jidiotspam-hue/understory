@@ -463,11 +463,15 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  content-visibility: auto;
+  contain-intrinsic-size: 260px;
+  will-change: transform;
+  transform: translateZ(0);
   transition: transform .2s var(--ease), border-color .2s var(--ease), box-shadow .2s var(--ease);
 }
 
 .video-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-2px) translateZ(0);
   border-color: var(--veil);
   box-shadow: 0 4px 14px rgba(0,0,0,0.04);
 }
@@ -581,30 +585,35 @@ body {
   background: rgba(245, 158, 11, 0.18) !important;
   color: #fbbf24 !important;
   border-color: rgba(245, 158, 11, 0.45) !important;
+  text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
 }
 
 [data-theme="dark"] .badge-pov {
   background: rgba(52, 211, 153, 0.18) !important;
   color: #6ee7b7 !important;
   border-color: rgba(52, 211, 153, 0.45) !important;
+  text-shadow: 0 0 8px rgba(110, 231, 183, 0.4);
 }
 
 [data-theme="dark"] .badge-decensored {
   background: rgba(251, 113, 133, 0.18) !important;
   color: #fda4af !important;
   border-color: rgba(251, 113, 133, 0.45) !important;
+  text-shadow: 0 0 8px rgba(253, 164, 175, 0.4);
 }
 
 [data-theme="dark"] .badge-3d {
   background: rgba(147, 197, 253, 0.18) !important;
   color: #93c5fd !important;
   border-color: rgba(147, 197, 253, 0.45) !important;
+  text-shadow: 0 0 8px rgba(147, 197, 253, 0.4);
 }
 
 [data-theme="dark"] .badge-quality {
   background: rgba(110, 231, 183, 0.18) !important;
   color: #a7f3d0 !important;
   border-color: rgba(110, 231, 183, 0.45) !important;
+  text-shadow: 0 0 8px rgba(167, 243, 208, 0.4);
 }
 
 /* ── Card Buttons Row ── */

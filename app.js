@@ -688,11 +688,16 @@
   }
 
   // ── Global Search & Filters ──
+  let searchRafId = null;
   searchInput.addEventListener('input', (e) => {
-    searchQuery = e.target.value.trim();
-    clearSearchBtn.hidden = !searchQuery;
-    syncQuickTags();
-    render();
+    const val = e.target.value.trim();
+    if (searchRafId) cancelAnimationFrame(searchRafId);
+    searchRafId = requestAnimationFrame(() => {
+      searchQuery = val;
+      clearSearchBtn.hidden = !searchQuery;
+      syncQuickTags();
+      render();
+    });
   });
 
   clearSearchBtn.addEventListener('click', () => {
