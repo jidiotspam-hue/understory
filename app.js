@@ -196,7 +196,9 @@
       'chainsaw-man': VIDEO_DATA.filter((v) => v.franchise === 'chainsaw-man').length,
       're-zero': VIDEO_DATA.filter((v) => v.franchise === 're-zero').length,
       horimiya: VIDEO_DATA.filter((v) => v.franchise === 'horimiya').length,
-      '100-kanojo': VIDEO_DATA.filter((v) => v.franchise === '100-kanojo').length
+      '100-kanojo': VIDEO_DATA.filter((v) => v.franchise === '100-kanojo').length,
+      overflow: VIDEO_DATA.filter((v) => v.franchise === 'overflow').length,
+      curated: VIDEO_DATA.filter((v) => v.franchise === 'curated').length
     };
 
     Object.keys(counts).forEach((key) => {
