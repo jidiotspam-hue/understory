@@ -198,6 +198,8 @@
       horimiya: VIDEO_DATA.filter((v) => v.franchise === 'horimiya').length,
       '100-kanojo': VIDEO_DATA.filter((v) => v.franchise === '100-kanojo').length,
       overflow: VIDEO_DATA.filter((v) => v.franchise === 'overflow').length,
+      roshidere: VIDEO_DATA.filter((v) => v.franchise === 'roshidere').length,
+      'tomo-chan': VIDEO_DATA.filter((v) => v.franchise === 'tomo-chan').length,
       curated: VIDEO_DATA.filter((v) => v.franchise === 'curated').length
     };
 
