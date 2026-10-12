@@ -32,9 +32,12 @@
   const modalVideoTitle = document.getElementById('modal-video-title');
   const modalFranchise = document.getElementById('modal-franchise');
   const modalCharacters = document.getElementById('modal-characters');
+  const modalLayer1Key = document.getElementById('modal-layer1-key');
+  const modalLayer2Key = document.getElementById('modal-layer2-key');
   const modalCopyDirectBtn = document.getElementById('modal-copy-direct-btn');
   const modalCopyCloakBtn = document.getElementById('modal-copy-cloak-btn');
   const modalDirectAnchor = document.getElementById('modal-direct-anchor');
+  const modalCloakAnchor = document.getElementById('modal-cloak-anchor');
 
   // Utility Elements
   const toastEl = document.getElementById('toast');
@@ -42,6 +45,9 @@
   const camouflageBtn = document.getElementById('camouflage-btn');
   const decoyView = document.getElementById('decoy-view');
   const decoyExitBtn = document.getElementById('decoy-exit-btn');
+  const copyLayer1Btn = document.getElementById('copy-layer1-btn');
+  const copyLayer2Btn = document.getElementById('copy-layer2-btn');
+  const copyAllCloakBtn = document.getElementById('copy-all-cloak');
   const copyAllUrlsBtn = document.getElementById('copy-all-urls');
 
   // ── Web Crypto Decryption ──
@@ -99,6 +105,11 @@
       vaultLockedView.hidden = true;
       vaultUnlockedView.hidden = false;
       statusLine.textContent = 'Decrypted in memory • Zero-knowledge protection';
+
+      const bannerKeysInfo = document.getElementById('banner-keys-info');
+      if (bannerKeysInfo && VIDEO_DATA.length > 0) {
+        bannerKeysInfo.innerHTML = `Outer: <code>${VIDEO_DATA[0].layer1Key}</code> ➔ Inner: <code>${VIDEO_DATA[0].layer2Key}</code>`;
+      }
 
       // Clean hash if pass was passed in URL
       if (location.hash.includes('pass=')) {
@@ -259,6 +270,14 @@
             <p class="card-meta">
               <strong>${item.characters.join(', ')}</strong> • <em>${item.userTag}</em>
             </p>
+            <div class="card-keys-row">
+              <span class="key-badge" data-key="${item.layer1Key}" title="Click to copy Layer 1 Key">
+                <strong>L1:</strong> ${item.layer1Key}
+              </span>
+              <span class="key-badge" data-key="${item.layer2Key}" title="Click to copy Layer 2 Key (tqq)">
+                <strong>L2:</strong> ${item.layer2Key}
+              </span>
+            </div>
             <div class="badges-row">
               ${badgesHtml}
             </div>
@@ -266,11 +285,14 @@
 
           <div class="card-actions">
             <button class="btn-incognito" data-id="${item.id}" title="Copy direct link for Private/Incognito window">
-              <span>⚡</span> Copy for Incognito
+              <span>⚡</span> Copy Direct
+            </button>
+            <button class="btn-cloak" data-id="${item.id}" title="Copy 2-Layer Cloaked URL">
+              <span>🔒</span> Copy Cloaked
             </button>
             <div class="card-sub-acts">
               <button class="act" data-action="details" data-id="${item.id}">Details</button>
-              <a href="${item.cloakUrl}" target="_blank" rel="noreferrer noopener" class="act act-accent" title="Open via Cloak decryptor">Cloak ↗</a>
+              <a href="${item.cloakUrl}" target="_blank" rel="noreferrer noopener" class="act act-accent" title="Open 2-Layer Cloak decryptor">Cloak ↗</a>
             </div>
           </div>
         </article>
@@ -283,7 +305,42 @@
   }
 
   function attachCardListeners() {
-    // One-click Incognito Copy button
+    // Key badges: 1-click copy key
+    cardsContainer.querySelectorAll('.key-badge').forEach((badge) => {
+      badge.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const key = badge.getAttribute('data-key');
+        if (key) {
+          copyToClipboard(key, `Copied passphrase: ${key}`);
+        }
+      });
+    });
+
+    // Copy 2-Layer Cloaked URL button
+    cardsContainer.querySelectorAll('.btn-cloak').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = btn.getAttribute('data-id');
+        const item = VIDEO_DATA.find((v) => v.id === id);
+        if (!item) return;
+
+        const originalText = btn.innerHTML;
+        btn.innerHTML = `<span>✓</span> Copied!`;
+        btn.style.borderColor = 'var(--moss)';
+
+        await copyToClipboard(
+          item.cloakUrl,
+          `2-Layer Cloaked URL copied! (L1: ${item.layer1Key} ➔ L2: ${item.layer2Key})`
+        );
+
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.style.borderColor = '';
+        }, 1800);
+      });
+    });
+
+    // One-click Incognito Direct URL Copy button
     cardsContainer.querySelectorAll('.btn-incognito').forEach((btn) => {
       btn.addEventListener('click', async (e) => {
         e.stopPropagation();
@@ -297,7 +354,7 @@
 
         await copyToClipboard(
           item.directUrl,
-          `Copied! Open Incognito (⌘+Shift+N) & paste URL`
+          `Direct URL copied! Open Incognito (⌘+Shift+N) & paste URL`
         );
 
         setTimeout(() => {
@@ -329,7 +386,31 @@
     modalDirectAnchor.href = item.directUrl;
     modalDirectAnchor.textContent = item.directUrl;
 
+    if (modalLayer1Key) modalLayer1Key.textContent = item.layer1Key;
+    if (modalLayer2Key) modalLayer2Key.textContent = item.layer2Key;
+    if (modalCloakAnchor) modalCloakAnchor.href = item.cloakUrl;
+    const modalCloakSub = document.getElementById('modal-cloak-sub');
+    if (modalCloakSub) {
+      modalCloakSub.textContent = `Encrypted URL (L1: ${item.layer1Key} ➔ L2: ${item.layer2Key})`;
+    }
+
     shieldDialog.showModal();
+  }
+
+  if (modalLayer1Key) {
+    modalLayer1Key.addEventListener('click', () => {
+      if (selectedVideo && selectedVideo.layer1Key) {
+        copyToClipboard(selectedVideo.layer1Key, `Layer 1 key copied: ${selectedVideo.layer1Key}`);
+      }
+    });
+  }
+
+  if (modalLayer2Key) {
+    modalLayer2Key.addEventListener('click', () => {
+      if (selectedVideo && selectedVideo.layer2Key) {
+        copyToClipboard(selectedVideo.layer2Key, `Layer 2 key copied: ${selectedVideo.layer2Key}`);
+      }
+    });
   }
 
   modalCloseBtn.addEventListener('click', () => {
@@ -352,7 +433,7 @@
     if (!selectedVideo) return;
     copyToClipboard(
       selectedVideo.cloakUrl,
-      'Cloaked link copied to clipboard!'
+      `2-Layer Cloaked URL copied! (L1: ${selectedVideo.layer1Key} ➔ L2: ${selectedVideo.layer2Key})`
     );
   });
 
@@ -385,12 +466,48 @@
     });
   }
 
+  // ── Batch Copy Actions ──
+  if (copyLayer1Btn) {
+    copyLayer1Btn.addEventListener('click', () => {
+      const key = VIDEO_DATA[0]?.layer1Key;
+      if (key) {
+        copyToClipboard(key, `Layer 1 Key copied: ${key}`);
+      } else {
+        showToast('Vault must be unlocked first');
+      }
+    });
+  }
+
+  if (copyLayer2Btn) {
+    copyLayer2Btn.addEventListener('click', () => {
+      const key = VIDEO_DATA[0]?.layer2Key;
+      if (key) {
+        copyToClipboard(key, `Layer 2 Key copied: ${key}`);
+      } else {
+        showToast('Vault must be unlocked first');
+      }
+    });
+  }
+
+  if (copyAllCloakBtn) {
+    copyAllCloakBtn.addEventListener('click', () => {
+      const filtered = getFilteredVideos();
+      const text = filtered
+        .map((v) => `# ${v.title} (${v.franchiseName})\n${v.cloakUrl}`)
+        .join('\n\n');
+      copyToClipboard(
+        text,
+        `Copied all ${filtered.length} 2-Layer Cloaked URLs!`
+      );
+    });
+  }
+
   copyAllUrlsBtn.addEventListener('click', () => {
     const filtered = getFilteredVideos();
     const urls = filtered.map((v) => `${v.title}\n${v.directUrl}`).join('\n\n');
     copyToClipboard(
       urls,
-      `Copied all ${filtered.length} URLs to clipboard for batch viewing!`
+      `Copied all ${filtered.length} Direct URLs to clipboard for batch viewing!`
     );
   });
 

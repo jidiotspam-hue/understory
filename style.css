@@ -474,6 +474,75 @@ body {
   transform: translateY(-1px);
 }
 
+.btn-cloak {
+  background: var(--raised);
+  color: var(--terracotta) !important;
+  border: 1px solid var(--rule);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .18s var(--ease);
+}
+
+.btn-cloak:hover {
+  border-color: var(--terracotta);
+  background: var(--paper);
+  transform: translateY(-1px);
+}
+
+.card-keys-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.key-badge {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: var(--raised);
+  border: 1px solid var(--rule);
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all .15s var(--ease);
+  user-select: none;
+}
+
+.key-badge:hover {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--veil);
+  transform: translateY(-1px);
+}
+
+.key-badge strong {
+  color: var(--terracotta);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.clickable-key {
+  cursor: pointer;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease);
+}
+
+.clickable-key:hover {
+  background: var(--veil) !important;
+  color: #fff !important;
+}
+
 .card-sub-acts {
   display: flex;
   align-items: center;

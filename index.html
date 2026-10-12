@@ -75,7 +75,7 @@
       <section class="shield-banner">
         <div class="shield-badge">
           <span class="shield-icon">🛡️</span>
-          <span class="shield-text"><strong>History Shield Active:</strong> Clicking any entry provides one-click Incognito copying so your browser history &amp; autocomplete stay pristine.</span>
+          <span class="shield-text"><strong>2-Layer Protection Active:</strong> Links encrypted via 2 layers (<span id="banner-keys-info">Outer ➔ Inner</span>). Copy direct or cloaked URLs for private/incognito browsing.</span>
         </div>
       </section>
 
@@ -101,8 +101,11 @@
       <section class="batch-bar">
         <span class="batch-label" id="results-count">12 titles found</span>
         <div class="batch-buttons">
+          <button id="copy-layer1-btn" class="act act-accent" title="Copy Layer 1 Key">Copy L1 Key</button>
+          <button id="copy-layer2-btn" class="act act-accent" title="Copy Layer 2 Key">Copy L2 Key</button>
+          <button id="copy-all-cloak" class="act" title="Copy all matching 2-Layer cloaked URLs">Copy All Cloak URLs</button>
+          <button id="copy-all-urls" class="act" title="Copy all matching direct URLs for incognito batch">Copy All Direct URLs</button>
           <button id="lock-vault-btn" class="act" title="Lock the vault and clear session memory">Lock Vault</button>
-          <button id="copy-all-urls" class="act act-accent" title="Copy all matching URLs for incognito batch">Copy All URLs</button>
         </div>
       </section>
 
@@ -115,7 +118,7 @@
       <footer class="foot">
         <div class="foot-left">
           <span>understory • zero-knowledge earthy index</span>
-          <span class="foot-sub">Decrypted strictly in browser memory via AES-GCM.</span>
+          <span class="foot-sub">Vault unlocked. Video links protected by Layer 1 (Outer) &amp; Layer 2 (Inner).</span>
         </div>
         <div class="foot-right">
           <a href="https://jidiotspam-hue.github.io/cloak/" target="_blank" rel="noopener noreferrer" class="act">Open Cloak Tool ↗</a>
@@ -148,6 +151,14 @@
           <span class="detail-label">Characters</span>
           <span class="detail-val" id="modal-characters"></span>
         </div>
+        <div class="detail-row">
+          <span class="detail-label">Layer 1 Key (Outer)</span>
+          <span class="detail-val code clickable-key" id="modal-layer1-key" title="Click to copy"></span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Layer 2 Key (Inner)</span>
+          <span class="detail-val code clickable-key" id="modal-layer2-key" title="Click to copy"></span>
+        </div>
       </div>
 
       <div class="modal-actions">
@@ -164,10 +175,14 @@
         <button id="modal-copy-cloak-btn" class="btn btn-secondary">
           <span class="btn-icon">🔒</span>
           <span class="btn-text">
-            <strong>Copy Cloaked Link</strong>
-            <small>Multi-layer encrypted URL</small>
+            <strong>Copy 2-Layer Cloaked URL</strong>
+            <small id="modal-cloak-sub">Encrypted 2-layer URL</small>
           </span>
         </button>
+
+        <a id="modal-cloak-anchor" href="#" target="_blank" rel="noreferrer noopener" class="act act-accent" style="display:flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:6px;text-align:center;text-decoration:none;font-weight:600;gap:8px;">
+          <span>🌐</span> Open 2-Layer Cloak Decryptor ↗
+        </a>
 
         <!-- Right Click Instruction Reminder -->
         <div class="modal-hint">
