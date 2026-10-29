@@ -526,7 +526,18 @@ body {
   font-size: 12.5px;
   color: var(--muted);
   line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.card-desc {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.45;
   margin-bottom: 12px;
+  background: var(--raised);
+  padding: 8px 10px;
+  border-radius: 6px;
+  border-left: 3px solid var(--veil-strong);
 }
 
 .badges-row {

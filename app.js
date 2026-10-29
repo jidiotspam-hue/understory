@@ -414,6 +414,7 @@
         <p class="card-meta">
           <strong>${item.characters.join(', ')}</strong> • <em>${item.userTag}</em>
         </p>
+        ${item.description ? `<p class="card-desc">${item.description}</p>` : ''}
         <div class="card-keys-row">
           <span class="key-badge" data-key="${item.layer1Key}" title="Click to copy Layer 1 Key">
             <strong>L1:</strong> ${item.layer1Key}
