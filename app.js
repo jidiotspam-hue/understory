@@ -451,7 +451,8 @@
     'compilation': { name: 'Compilations & Anthologies', icon: '📚' },
     'ensemble': { name: 'Duos & Ensembles', icon: '👥' },
     'solo': { name: 'Solo Features', icon: '⭐' },
-    'portal': { name: 'Archive Portals', icon: '🏛️' }
+    'portal': { name: 'Archive Portals', icon: '🏛️' },
+    'nubiles-exclusive': { name: 'Nubiles 4K Exclusives', icon: '💎' }
   };
 
   // ── Render Cards & Sub-Sections ──
@@ -482,9 +483,11 @@
     }
 
     if (activeGroupMode === 'type') {
-      const typeOrder = ['3d-animation', '2d-anime', 'compilation', 'ensemble', 'solo', 'portal'];
+      const typeOrder = ['nubiles-exclusive', '3d-animation', '2d-anime', 'compilation', 'ensemble', 'solo', 'portal'];
+      const presentTypes = Array.from(new Set(list.map((v) => v.type)));
+      const allTypes = [...typeOrder, ...presentTypes.filter((t) => !typeOrder.includes(t))];
       let html = '';
-      typeOrder.forEach((typeKey) => {
+      allTypes.forEach((typeKey) => {
         const groupItems = list.filter((v) => v.type === typeKey);
         if (groupItems.length === 0) return;
         const meta = TYPE_META[typeKey] || { name: typeKey, icon: '📁' };
