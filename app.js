@@ -278,7 +278,7 @@
       'all', 'quintuplets', 'demon-slayer', 'chainsaw-man', 're-zero',
       'horimiya', '100-kanojo', 'overflow', 'roshidere', 'tomo-chan',
       'frieren', 'jujutsu-kaisen', 'fruit-of-evolution', 'dress-up-darling',
-      'spy-x-family', 'nier-automata', 'curated'
+      'spy-x-family', 'nier-automata', 'curated', 'nubiles'
     ];
 
     franchiseKeys.forEach((key) => {
@@ -295,7 +295,7 @@
     }
 
     const typeKeys = [
-      'all', '3d-animation', '2d-anime', 'compilation', 'ensemble', 'solo', 'portal'
+      'all', '3d-animation', '2d-anime', 'compilation', 'ensemble', 'solo', 'portal', 'nubiles-exclusive'
     ];
 
     typeKeys.forEach((key) => {
