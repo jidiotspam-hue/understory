@@ -169,6 +169,16 @@
     try {
       const decrypted = await decryptVault(window.ENCRYPTED_VAULT, passphrase);
       VIDEO_DATA = decrypted;
+      // When served through the phone relay (not GitHub Pages), keep navigation on the
+      // same origin so local-disk videos resolve to the relay's /media/ path.
+      if (location.protocol.startsWith('http') && !location.hostname.endsWith('github.io')) {
+        const ghPlayer = 'https://jidiotspam-hue.github.io/understory/player.html';
+        VIDEO_DATA.forEach((v) => {
+          if (v.playerUrl && v.playerUrl.startsWith(ghPlayer)) {
+            v.playerUrl = 'player.html' + v.playerUrl.slice(ghPlayer.length);
+          }
+        });
+      }
       sessionStorage.setItem('understory_session_pass', passphrase);
 
       vaultLockedView.hidden = true;
@@ -233,6 +243,13 @@
   });
 
   lockVaultBtn.addEventListener('click', lockVault);
+
+  const phoneRelayBtn = document.getElementById('phone-relay-btn');
+  if (phoneRelayBtn) {
+    phoneRelayBtn.addEventListener('click', () => {
+      showToast('On your Mac run ./stream_phone.sh, then open the https link it prints on your phone.', 6000);
+    });
+  }
 
   // ── Toast Notification ──
   let toastTimer = null;

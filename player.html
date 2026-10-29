@@ -469,12 +469,17 @@
         <a href="index.html" class="act act-strong">← Open vault archive</a>
       </div>
 
-      <!-- Local File Direct Stream Prompt (for browser security boundary when on https) -->
-      <div id="local-media-prompt" class="standby-box" style="display:none; z-index: 10;">
-        <p id="local-media-msg" style="font-size: 14.5px; color: var(--ink); font-weight: 600;">📁 Local Disk Media: Ready to Stream</p>
-        <p style="font-size: 13px; color: var(--muted); margin-top: -6px;">Drag & drop your video file here, or select it below:</p>
+      <!-- Local File & Phone Stream Relay Prompt -->
+      <div id="local-media-prompt" class="standby-box" style="display:none; z-index: 10; max-width: 440px; text-align: center; margin: 0 auto;">
+        <p id="local-media-msg" style="font-size: 15px; color: var(--ink); font-weight: 600; margin-bottom: 4px;">📁 Stored on Mac's Disk</p>
+        <p style="font-size: 12.5px; color: var(--muted); margin-bottom: 12px;">To stream this 4K release to your phone, connect to your Mac's streamer relay:</p>
+        <div style="display:flex; gap:8px; width: 100%; margin-bottom: 12px;">
+          <input type="text" id="stream-server-input" placeholder="http://10.10.42.107:8888" style="padding: 8px 12px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); color: var(--ink); font-size: 13px; flex: 1;">
+          <button type="button" id="connect-server-btn" class="act act-strong">Stream</button>
+        </div>
+        <p style="font-size: 11.5px; color: var(--muted); margin-bottom: 10px;">Or select the file directly on this device:</p>
         <input type="file" id="local-file-picker" accept="video/*" style="display:none">
-        <button id="choose-local-file-btn" type="button" class="act act-strong">Select Video from Downloads</button>
+        <button id="choose-local-file-btn" type="button" class="act">Select Video File</button>
       </div>
 
       <iframe id="video-frame" class="player-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
@@ -605,6 +610,8 @@
     const localMediaMsg = document.getElementById('local-media-msg');
     const localFilePicker = document.getElementById('local-file-picker');
     const chooseLocalFileBtn = document.getElementById('choose-local-file-btn');
+    const streamServerInput = document.getElementById('stream-server-input');
+    const connectServerBtn = document.getElementById('connect-server-btn');
 
     let currentItem = null;
     let isMuted = false;
@@ -660,6 +667,15 @@
     }
 
     async function initFromUrl() {
+      // Auto-save stream server if passed in query string (e.g. ?server=http://10.10.42.107:8888)
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('server')) {
+          const s = urlParams.get('server');
+          localStorage.setItem('understory_stream_server', s);
+        }
+      } catch (e) {}
+
       const hash = window.location.hash;
       if (hash && hash.startsWith('#v=')) {
         try {
@@ -738,8 +754,22 @@
       statusLine.textContent = `${item.franchise ? item.franchise + ' • ' : ''}Encrypted in-memory stream active. Zero history trace.`;
       document.title = `${item.title || 'Stream'} • understory`;
 
-      const rawUrl = item.embedUrl || item.directUrl;
+      let rawUrl = item.embedUrl || item.directUrl;
       if (!rawUrl) return;
+
+      // When served by the phone relay (any host other than GitHub Pages), local
+      // file:// sources map to the relay's same-origin /media/ path (HTTPS via tunnel).
+      const onRelay = location.protocol.startsWith('http') && !location.hostname.endsWith('github.io');
+      if (onRelay && rawUrl.startsWith('file://')) {
+        const filename = rawUrl.split('/').pop();
+        rawUrl = new URL('media/' + encodeURIComponent(filename), location.href).toString();
+      } else {
+        const streamServer = localStorage.getItem('understory_stream_server');
+        if (streamServer && rawUrl.startsWith('file://')) {
+          const filename = rawUrl.split('/').pop();
+          rawUrl = streamServer.replace(/\/$/, '') + '/' + filename;
+        }
+      }
 
       standbyBox.style.display = 'none';
 
@@ -750,23 +780,30 @@
         nativeVideo.style.display = 'block';
 
         const isLocalFile = rawUrl.startsWith('file://');
-        const filename = rawUrl.split('/').pop();
+        const filename = decodeURIComponent(rawUrl.split('/').pop());
 
         if (isLocalFile && location.protocol === 'https:') {
           if (localMediaPrompt && localMediaMsg) {
-            localMediaMsg.textContent = `📁 Local Disk Media: ${filename}`;
+            localMediaMsg.textContent = `📁 Stored on Mac's Disk: ${filename}`;
             localMediaPrompt.style.display = 'flex';
+            if (streamServerInput && !streamServerInput.value) {
+              streamServerInput.value = 'http://10.10.42.107:8888';
+            }
           }
         } else {
+          if (localMediaPrompt) localMediaPrompt.style.display = 'none';
           nativeVideo.src = rawUrl;
           nativeVideo.muted = isMuted;
           nativeVideo.volume = currentVolume / 100;
           nativeVideo.play().catch(() => {});
 
           nativeVideo.onerror = () => {
-            if (isLocalFile && localMediaPrompt && localMediaMsg) {
-              localMediaMsg.textContent = `📁 Local Disk Media: ${filename}`;
+            if (localMediaPrompt && localMediaMsg) {
+              localMediaMsg.textContent = `📁 Stored on Mac's Disk: ${filename}`;
               localMediaPrompt.style.display = 'flex';
+              if (streamServerInput && !streamServerInput.value) {
+                streamServerInput.value = 'http://10.10.42.107:8888';
+              }
             }
           };
         }
@@ -1041,6 +1078,23 @@
         toggleAutoDisguise();
       }
     });
+
+    // Phone Stream Relay Connect
+    if (connectServerBtn && streamServerInput) {
+      const saved = localStorage.getItem('understory_stream_server');
+      if (saved) streamServerInput.value = saved;
+
+      connectServerBtn.addEventListener('click', () => {
+        const val = streamServerInput.value.trim();
+        if (val) {
+          localStorage.setItem('understory_stream_server', val);
+          if (currentItem) mountStream(currentItem);
+        }
+      });
+      streamServerInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') connectServerBtn.click();
+      });
+    }
 
     // Local Media Picker and Drag & Drop
     if (chooseLocalFileBtn && localFilePicker) {
