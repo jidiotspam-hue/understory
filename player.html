@@ -469,6 +469,14 @@
         <a href="index.html" class="act act-strong">← Open vault archive</a>
       </div>
 
+      <!-- Local File Direct Stream Prompt (for browser security boundary when on https) -->
+      <div id="local-media-prompt" class="standby-box" style="display:none; z-index: 10;">
+        <p id="local-media-msg" style="font-size: 14.5px; color: var(--ink); font-weight: 600;">📁 Local Disk Media: Ready to Stream</p>
+        <p style="font-size: 13px; color: var(--muted); margin-top: -6px;">Drag & drop your video file here, or select it below:</p>
+        <input type="file" id="local-file-picker" accept="video/*" style="display:none">
+        <button id="choose-local-file-btn" type="button" class="act act-strong">Select Video from Downloads</button>
+      </div>
+
       <iframe id="video-frame" class="player-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
       <video id="native-video" class="player-frame" controls playsinline preload="auto" style="display:none;width:100%;height:100%;background:#000;"></video>
     </div>
@@ -593,6 +601,10 @@
     const mediaTitle = document.getElementById('media-title');
     const statusLine = document.getElementById('status-line');
     const themeToggle = document.getElementById('theme-toggle');
+    const localMediaPrompt = document.getElementById('local-media-prompt');
+    const localMediaMsg = document.getElementById('local-media-msg');
+    const localFilePicker = document.getElementById('local-file-picker');
+    const chooseLocalFileBtn = document.getElementById('choose-local-file-btn');
 
     let currentItem = null;
     let isMuted = false;
@@ -736,10 +748,28 @@
         videoFrame.style.display = 'none';
         videoFrame.src = 'about:blank';
         nativeVideo.style.display = 'block';
-        nativeVideo.src = rawUrl;
-        nativeVideo.muted = isMuted;
-        nativeVideo.volume = currentVolume / 100;
-        nativeVideo.play().catch(() => {});
+
+        const isLocalFile = rawUrl.startsWith('file://');
+        const filename = rawUrl.split('/').pop();
+
+        if (isLocalFile && location.protocol === 'https:') {
+          if (localMediaPrompt && localMediaMsg) {
+            localMediaMsg.textContent = `📁 Local Disk Media: ${filename}`;
+            localMediaPrompt.style.display = 'flex';
+          }
+        } else {
+          nativeVideo.src = rawUrl;
+          nativeVideo.muted = isMuted;
+          nativeVideo.volume = currentVolume / 100;
+          nativeVideo.play().catch(() => {});
+
+          nativeVideo.onerror = () => {
+            if (isLocalFile && localMediaPrompt && localMediaMsg) {
+              localMediaMsg.textContent = `📁 Local Disk Media: ${filename}`;
+              localMediaPrompt.style.display = 'flex';
+            }
+          };
+        }
       } else {
         // Sandboxed Embedded Player: Strict sandbox blocks all click redirects and popups
         if (nativeVideo) {
@@ -1011,6 +1041,36 @@
         toggleAutoDisguise();
       }
     });
+
+    // Local Media Picker and Drag & Drop
+    if (chooseLocalFileBtn && localFilePicker) {
+      chooseLocalFileBtn.addEventListener('click', () => localFilePicker.click());
+      localFilePicker.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          const blobUrl = URL.createObjectURL(e.target.files[0]);
+          videoFrame.style.display = 'none';
+          nativeVideo.style.display = 'block';
+          nativeVideo.src = blobUrl;
+          nativeVideo.play().catch(() => {});
+          if (localMediaPrompt) localMediaPrompt.style.display = 'none';
+        }
+      });
+    }
+
+    if (playerWrap) {
+      playerWrap.addEventListener('dragover', (e) => e.preventDefault());
+      playerWrap.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          const blobUrl = URL.createObjectURL(e.dataTransfer.files[0]);
+          videoFrame.style.display = 'none';
+          nativeVideo.style.display = 'block';
+          nativeVideo.src = blobUrl;
+          nativeVideo.play().catch(() => {});
+          if (localMediaPrompt) localMediaPrompt.style.display = 'none';
+        }
+      });
+    }
 
     // Initialize
     initFromUrl();

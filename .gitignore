@@ -1,5 +1,9 @@
 *.sh
 *keys*
+*key*
+*notes*
+*template*
+disguised_notes_templates.md
 *.env
 *.log
 .DS_Store
