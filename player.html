@@ -1079,6 +1079,31 @@
       }
     });
 
+    // Live playback readout: confirms the real decoded resolution (4K = 3840x2160),
+    // how much is buffered ahead, and any dropped frames.
+    function updatePlaybackReadout() {
+      if (!nativeVideo || nativeVideo.style.display === 'none' || !nativeVideo.videoWidth) return;
+      let ahead = 0;
+      try {
+        const b = nativeVideo.buffered;
+        for (let i = 0; i < b.length; i++) {
+          if (nativeVideo.currentTime >= b.start(i) && nativeVideo.currentTime <= b.end(i)) {
+            ahead = Math.max(0, b.end(i) - nativeVideo.currentTime);
+          }
+        }
+      } catch (e) {}
+      const q = nativeVideo.getVideoPlaybackQuality ? nativeVideo.getVideoPlaybackQuality() : null;
+      const w = nativeVideo.videoWidth, h = nativeVideo.videoHeight;
+      const tag = h >= 2160 ? '4K' : (h >= 1440 ? '1440p' : (h >= 1080 ? '1080p' : h + 'p'));
+      statusLine.textContent = `${tag} ${w}×${h} • buffered ${ahead.toFixed(0)}s` +
+        (q && q.droppedVideoFrames ? ` • dropped ${q.droppedVideoFrames}` : '');
+    }
+    if (nativeVideo) {
+      nativeVideo.addEventListener('loadedmetadata', updatePlaybackReadout);
+      nativeVideo.addEventListener('resize', updatePlaybackReadout);
+      setInterval(updatePlaybackReadout, 3000);
+    }
+
     // Phone Stream Relay Connect
     if (connectServerBtn && streamServerInput) {
       const saved = localStorage.getItem('understory_stream_server');
