@@ -198,6 +198,7 @@
       updateFilterCounts();
       render();
       startSessionTimer();
+      startRelayWatch();
       showToast('Vault unlocked successfully');
     } catch (err) {
       vaultErr.hidden = false;
@@ -212,6 +213,7 @@
   function lockVault() {
     VIDEO_DATA = [];
     sessionStorage.removeItem('understory_session_pass');
+    stopRelayWatch();
     stopSessionTimer();
     vaultUnlockedView.hidden = true;
     vaultLockedView.hidden = false;
@@ -247,7 +249,14 @@
   const phoneRelayBtn = document.getElementById('phone-relay-btn');
   if (phoneRelayBtn) {
     phoneRelayBtn.addEventListener('click', () => {
-      showToast('On your Mac run ./stream_phone.sh, then open the https link it prints on your phone.', 6000);
+      if (relayBase) {
+        showToast('Relay online. Disk videos open on your Mac relay.', 3500);
+      } else if (onGithubPages) {
+        showToast('Relay offline. Run ./stream_phone.sh on your Mac; this page reconnects automatically.', 6000);
+        resolveRelay();
+      } else {
+        showToast('You are on the relay itself.', 3000);
+      }
     });
   }
 
@@ -400,6 +409,86 @@
     return list;
   }
 
+  // ── Phone Relay Auto-Discovery ──
+  // relay.json holds the relay's current tunnel URL, encrypted with the vault
+  // passphrase. After unlock we decrypt it, ping it, and (if alive) send
+  // local-disk titles to the player on the relay's own origin.
+  const RELAY_RAW = 'https://raw.githubusercontent.com/jidiotspam-hue/understory/main/relay.json';
+  let relayBase = null;
+  let relayTimer = null;
+  const onGithubPages = location.hostname.endsWith('github.io');
+
+  function setRelayUI(state) {
+    const btn = document.getElementById('phone-relay-btn');
+    if (!btn) return;
+    const labels = { online: '📱 Relay: Online', offline: '📱 Relay: Offline', checking: '📱 Relay: …' };
+    btn.textContent = labels[state] || labels.offline;
+    btn.classList.toggle('act-strong', state === 'online');
+  }
+
+  async function fetchRelayBlob() {
+    const bust = `?t=${Date.now()}`;
+    for (const url of [RELAY_RAW + bust, 'relay.json' + bust]) {
+      try {
+        const r = await fetch(url, { cache: 'no-store' });
+        if (r.ok) return (await r.json()).relay;
+      } catch (e) { /* try next source */ }
+    }
+    return null;
+  }
+
+  async function resolveRelay() {
+    if (!onGithubPages || VIDEO_DATA.length === 0) return;
+    const pass = sessionStorage.getItem('understory_session_pass');
+    if (!pass) return;
+    const before = relayBase;
+    let next = null;
+    try {
+      const blob = await fetchRelayBlob();
+      if (blob) {
+        const info = await decryptVault(blob, pass);
+        if (info && info.url) {
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), 6000);
+          try {
+            const res = await fetch(info.url + 'ping', { cache: 'no-store', signal: ctrl.signal });
+            if (res.ok) next = info.url;
+          } finally {
+            clearTimeout(t);
+          }
+        }
+      }
+    } catch (e) { next = null; }
+    relayBase = next;
+    setRelayUI(next ? 'online' : 'offline');
+    if (before !== next && VIDEO_DATA.length) {
+      render();
+      showToast(next ? 'Phone relay connected — disk videos will play' : 'Phone relay offline');
+    }
+  }
+
+  function startRelayWatch() {
+    if (!onGithubPages) return;
+    stopRelayWatch();
+    setRelayUI('checking');
+    resolveRelay();
+    relayTimer = setInterval(resolveRelay, 45000);
+  }
+
+  function stopRelayWatch() {
+    if (relayTimer) clearInterval(relayTimer);
+    relayTimer = null;
+    relayBase = null;
+  }
+
+  function getPlayerHref(item) {
+    if (relayBase && item.directUrl && item.directUrl.startsWith('file://')) {
+      const i = item.playerUrl.indexOf('#v=');
+      if (i !== -1) return relayBase + 'player.html' + item.playerUrl.slice(i);
+    }
+    return item.playerUrl;
+  }
+
   function renderCardHtml(item) {
     const isFav = favorites.includes(item.id);
     const badgesHtml = item.badges
@@ -447,7 +536,7 @@
 
       <div class="card-actions">
         <div class="card-primary-acts">
-          <a href="${item.playerUrl}" target="_blank" rel="noreferrer noopener" class="btn-player-primary" title="Launch Built-in 4K Studio Player">
+          <a href="${getPlayerHref(item)}" target="_blank" rel="noreferrer noopener" class="btn-player-primary" title="Launch Built-in 4K Studio Player">
             <span>▶</span> Launch 4K Studio Player
           </a>
         </div>

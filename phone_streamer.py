@@ -51,6 +51,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._deny(404)
         rel = path[len(prefix):] or 'index.html'
 
+        if rel == 'ping':  # liveness probe used by the GitHub Pages vault
+            body = b'ok'
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
+            self.send_header('Content-Length', str(len(body)))
+            self.send_header('Access-Control-Allow-Origin', 'https://jidiotspam-hue.github.io')
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
+            if not head_only:
+                self.wfile.write(body)
+            return
+
         if rel in SITE_FILES:
             return self._send_file(os.path.join(SITE_DIR, rel), SITE_FILES[rel], head_only, no_store=True)
 

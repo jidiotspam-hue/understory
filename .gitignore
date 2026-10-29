@@ -9,3 +9,4 @@ disguised_notes_templates.md
 .DS_Store
 vault.json
 *.csv
+__pycache__/
