@@ -252,7 +252,7 @@
       if (relayBase) {
         showToast('Relay online. Disk videos open on your Mac relay.', 3500);
       } else if (onGithubPages) {
-        showToast('Relay offline. Run ./stream_phone.sh on your Mac; this page reconnects automatically.', 6000);
+        showToast('Relay offline: ' + (relayWhy || 'checking…') + '. Rechecking now.', 7000);
         resolveRelay();
       } else {
         showToast('You are on the relay itself.', 3000);
@@ -416,6 +416,7 @@
   const RELAY_RAW = 'https://raw.githubusercontent.com/jidiotspam-hue/understory/main/relay.json';
   let relayBase = null;
   let relayTimer = null;
+  let relayWhy = '';
   const onGithubPages = location.hostname.endsWith('github.io');
 
   function setRelayUI(state) {
@@ -443,16 +444,20 @@
     if (!pass) return;
     const before = relayBase;
     let next = null;
+    relayWhy = 'could not load relay.json';
     try {
       const blob = await fetchRelayBlob();
       if (blob) {
+        relayWhy = 'relay.json unreadable (wrong passphrase?)';
         const info = await decryptVault(blob, pass);
+        relayWhy = 'Mac relay is marked offline';
         if (info && info.url) {
+          relayWhy = 'cannot reach ' + new URL(info.url).hostname + ' (blocked by network/extension, or tunnel down)';
           const ctrl = new AbortController();
-          const t = setTimeout(() => ctrl.abort(), 6000);
+          const t = setTimeout(() => ctrl.abort(), 10000);
           try {
             const res = await fetch(info.url + 'ping', { cache: 'no-store', signal: ctrl.signal });
-            if (res.ok) next = info.url;
+            if (res.ok) { next = info.url; relayWhy = ''; }
           } finally {
             clearTimeout(t);
           }
