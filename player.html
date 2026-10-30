@@ -545,7 +545,7 @@
     <!-- Metadata pill -->
     <div class="meta-deck" id="meta-deck">
       <span class="title-pill" id="media-title">Studio Stream</span>
-      <span class="tag" style="color:var(--ok);border-color:var(--ok);font-weight:600;">1080p Max</span>
+      <span id="res-tag" class="tag" style="color:var(--ok);border-color:var(--ok);font-weight:600;">Max Quality</span>
       <span class="tag" style="color:var(--veil-strong);border-color:var(--veil-strong);">🛡️ Sandboxed</span>
       <span class="tag">60 FPS</span>
       <span class="tag">RAM-Only</span>
@@ -1095,6 +1095,7 @@
       const q = nativeVideo.getVideoPlaybackQuality ? nativeVideo.getVideoPlaybackQuality() : null;
       const w = nativeVideo.videoWidth, h = nativeVideo.videoHeight;
       const tag = h >= 2160 ? '4K' : (h >= 1440 ? '1440p' : (h >= 1080 ? '1080p' : h + 'p'));
+      const rt = document.getElementById('res-tag'); if (rt) rt.textContent = tag;
       statusLine.textContent = `${tag} ${w}×${h} • buffered ${ahead.toFixed(0)}s` +
         (q && q.droppedVideoFrames ? ` • dropped ${q.droppedVideoFrames}` : '');
     }
