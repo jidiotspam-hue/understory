@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>understory • player</title>
+  <meta name="description" content="Minimalist, zero-trace hardware media player.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%236B5AA0'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* cloak & understory unified minimalist aesthetic */
+    :root {
+      --paper: #F3EEE8;
+      --raised: #EAE3D8;
+      --ink: #201E2A;
+      --muted: #7C7686;
+      --faint: #C3BCC9;
+      --rule: #DAD2C8;
+      --veil: #6B5AA0;
+      --veil-strong: #4A3B73;
+      --veil-strong-hover: #3A2D5C;
+      --ok: #4C6B57;
+      --bad: #9C3A22;
+
+      --font-heading: "Caprasimo", ui-sans-serif, system-ui, sans-serif;
+      --font-body: "Figtree", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                   "Helvetica Neue", Arial, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+      --step: clamp(24px, 4vw, 36px);
+      --ease: cubic-bezier(.32, .72, 0, 1);
+    }
+
+    body[data-theme="dark"] {
+      --paper: #171521;
+      --raised: #201D2C;
+      --ink: #EDE7F3;
+      --muted: #9C93AD;
+      --faint: #453D57;
+      --rule: #2C2740;
+      --veil-strong: #B49BEF;
+      --veil-strong-hover: #D2C0FF;
+      --ok: #8FBBA0;
+      --bad: #E3A187;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --paper: #171521;
+        --raised: #201D2C;
+        --ink: #EDE7F3;
+        --muted: #9C93AD;
+        --faint: #453D57;
+        --rule: #2C2740;
+        --veil-strong: #B49BEF;
+        --veil-strong-hover: #D2C0FF;
+        --ok: #8FBBA0;
+        --bad: #E3A187;
+      }
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+
+    body {
+      margin: 0;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--step) 20px;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+      transition: background .2s var(--ease), color .2s var(--ease);
+    }
+
+    #app {
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* ── Wordmark header like cloak ── */
+    .head {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .head-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .wordmark {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0;
+      font-family: var(--font-heading);
+      font-weight: 400;
+      font-size: clamp(24px, 5vw, 32px);
+      letter-spacing: -0.015em;
+      line-height: 1;
+      text-decoration: none;
+      color: var(--ink);
+    }
+
+    .mark {
+      position: relative;
+      width: 16px;
+      height: 16px;
+      flex: none;
+    }
+
+    .mark i {
+      position: absolute;
+      inset: 0;
+      display: block;
+      border-radius: 4px;
+      background: var(--veil);
+      transform-origin: center;
+      animation: breathe 3.2s var(--ease) infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { transform: scale(1);   opacity: .55; }
+      50%      { transform: scale(.82); opacity: 1; }
+    }
+
+    .wordmark-sub {
+      font-family: var(--font-body);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      letter-spacing: 0;
+    }
+
+    .head-acts {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .statusline {
+      margin: 0;
+      font-size: 13.5px;
+      color: var(--muted);
+      min-height: 1.4em;
+    }
+
+    /* ── Player Stage ── */
+    .player-container {
+      position: relative;
+      width: 100%;
+    }
+
+    .ambient-glow {
+      position: absolute;
+      inset: -12px -12px -16px -12px;
+      border-radius: 18px;
+      background: radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.35) 0%, rgba(236, 72, 153, 0.2) 40%, transparent 75%);
+      filter: blur(28px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .5s var(--ease);
+      z-index: 0;
+    }
+
+    .ambient-glow.active {
+      opacity: 0.95;
+    }
+
+    .player-wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 10px;
+      border: 1px solid var(--rule);
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+      transition: all .25s var(--ease);
+    }
+
+    body.lights-off {
+      background: #06050b !important;
+    }
+
+    body.lights-off .head,
+    body.lights-off .controls-deck,
+    body.lights-off .hint {
+      opacity: 0.22;
+      transition: opacity .3s ease;
+    }
+
+    body.lights-off .head:hover,
+    body.lights-off .controls-deck:hover,
+    body.lights-off .hint:hover {
+      opacity: 1;
+    }
+
+    body.lights-off .ambient-glow.active {
+      opacity: 1;
+      filter: blur(36px);
+    }
+
+    .player-wrap.theater {
+      max-width: 100vw;
+      border-radius: 0;
+      margin: -10px calc(-50vw + 50%);
+      width: 100vw;
+      max-height: 82vh;
+      border-left: none;
+      border-right: none;
+    }
+
+    .player-wrap.ratio-21-9 {
+      aspect-ratio: 21 / 9;
+    }
+
+    .player-wrap.ratio-fit {
+      aspect-ratio: auto;
+      height: 72vh;
+    }
+
+    .player-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      display: none;
+      background: #000;
+    }
+
+    .standby-box {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+      padding: 24px;
+      background: var(--raised);
+    }
+
+    /* Audio Mute Overlay Curtain */
+    .mute-indicator-overlay {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(23, 21, 33, 0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--rule);
+      color: var(--ink);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      padding: 4px 10px;
+      border-radius: 6px;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      opacity: 0;
+      transition: opacity .25s ease;
+      z-index: 20;
+    }
+
+    .mute-indicator-overlay.visible {
+      opacity: 1;
+    }
+
+    /* ── Controls Row (like cloak .row .row-acts) ── */
+    .controls-deck {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+      padding-top: 4px;
+    }
+
+    .row-acts {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    /* Text buttons, no boxes — identical to cloak */
+    .act {
+      position: relative;
+      padding: 4px 0;
+      border: 0;
+      background: none;
+      color: var(--muted);
+      font: inherit;
+      font-family: var(--font-heading);
+      font-weight: 400;
+      font-size: 14.5px;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: color .18s var(--ease);
+      user-select: none;
+    }
+
+    .act:hover {
+      color: var(--ink);
+    }
+
+    .act-strong {
+      color: var(--veil-strong);
+    }
+
+    .act-strong:hover {
+      color: var(--veil-strong-hover);
+    }
+
+    .act-muted {
+      color: var(--bad);
+    }
+
+    .act-accent {
+      color: var(--veil-strong);
+    }
+
+    .meta-deck {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+
+    .title-pill {
+      color: var(--ink);
+      font-weight: 600;
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tag {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      background: var(--raised);
+      border: 1px solid var(--rule);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .hint {
+      margin: 8px 0 0;
+      font-size: 12.5px;
+      color: var(--muted);
+      text-wrap: pretty;
+    }
+
+    kbd {
+      background: var(--raised);
+      border: 1px solid var(--rule);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      color: var(--ink);
+    }
+
+    /* ── Decoy Camouflage Screen ── */
+    #decoy-view {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: var(--paper);
+      color: var(--ink);
+      padding: var(--step) 24px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #decoy-view.active {
+      display: flex;
+    }
+
+    .decoy-card {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .decoy-title {
+      font-family: var(--font-heading);
+      font-size: 26px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+    }
+
+    .decoy-text {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .decoy-exit-btn {
+      align-self: flex-start;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<main id="app">
+
+  <!-- Header Wordmark -->
+  <header class="head">
+    <div class="head-row">
+      <a href="index.html" class="wordmark" title="Return to vault">
+        <span class="mark" aria-hidden="true"><i></i></span>understory
+        <span class="wordmark-sub">player</span>
+      </a>
+      <div class="head-acts">
+        <button id="theme-toggle" class="act" type="button" aria-label="Toggle theme">◐</button>
+        <button id="panic-btn" class="act" type="button" style="color: var(--bad);" title="Emergency disguise (Esc)">Disguise</button>
+      </div>
+    </div>
+    <p class="statusline" id="status-line">In-memory 4K cinema stream. Encrypted, zero history trace.</p>
+  </header>
+
+  <!-- Player Stage Container with Ambient Cinema Glow -->
+  <div class="player-container">
+    <div id="ambient-glow" class="ambient-glow"></div>
+    <div id="player-wrap" class="player-wrap">
+      <div id="mute-indicator" class="mute-indicator-overlay">
+        <span id="mute-icon-hud">🔇</span>
+        <span id="mute-text-hud">Muted</span>
+      </div>
+
+      <!-- Innocent Standby Screen -->
+      <div id="standby-box" class="standby-box">
+        <p style="font-size: 14.5px; color: var(--muted);">Waiting for encrypted stream…</p>
+        <a href="index.html" class="act act-strong">← Open vault archive</a>
+      </div>
+
+      <!-- Local File & Phone Stream Relay Prompt -->
+      <div id="local-media-prompt" class="standby-box" style="display:none; z-index: 10; max-width: 440px; text-align: center; margin: 0 auto;">
+        <p id="local-media-msg" style="font-size: 15px; color: var(--ink); font-weight: 600; margin-bottom: 4px;">📁 Stored on Mac's Disk</p>
+        <p style="font-size: 12.5px; color: var(--muted); margin-bottom: 12px;">To stream this 4K release to your phone, connect to your Mac's streamer relay:</p>
+        <div style="display:flex; gap:8px; width: 100%; margin-bottom: 12px;">
+          <input type="text" id="stream-server-input" placeholder="http://10.10.42.107:8888" style="padding: 8px 12px; border: 1px solid var(--rule); border-radius: 6px; background: var(--paper); color: var(--ink); font-size: 13px; flex: 1;">
+          <button type="button" id="connect-server-btn" class="act act-strong">Stream</button>
+        </div>
+        <p style="font-size: 11.5px; color: var(--muted); margin-bottom: 10px;">Or select the file directly on this device:</p>
+        <input type="file" id="local-file-picker" accept="video/*" style="display:none">
+        <button id="choose-local-file-btn" type="button" class="act">Select Video File</button>
+      </div>
+
+      <iframe id="video-frame" class="player-frame" sandbox="allow-scripts allow-same-origin allow-forms allow-presentation" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      <video id="native-video" class="player-frame" controls playsinline preload="auto" style="display:none;width:100%;height:100%;background:#000;"></video>
+    </div>
+  </div>
+
+  <!-- Minimalist Controls Deck -->
+  <div class="controls-deck">
+    <div class="row-acts">
+      <!-- Mute / Unmute Button -->
+      <button id="mute-btn" type="button" class="act act-strong" title="Toggle audio mute (M)">
+        <span id="mute-icon">🔊</span>
+        <span id="mute-label">Sound On</span>
+      </button>
+
+      <!-- Aspect Ratio Switcher -->
+      <button id="aspect-btn" type="button" class="act" title="Switch aspect ratio (A)">
+        <span>📐</span> <span id="aspect-label">16:9</span>
+      </button>
+
+      <!-- Cinema Lights Dimmer -->
+      <button id="lights-btn" type="button" class="act" title="Cinema lights dim (L)">
+        <span>💡</span> <span id="lights-label">Lights: On</span>
+      </button>
+
+      <!-- Pop-out Window -->
+      <button id="pip-btn" type="button" class="act" title="Pop-out player window (P)">
+        <span>🗗</span> Pop-out
+      </button>
+
+      <!-- Direct Fallback Link (If frame is blocked by adblock) -->
+      <a id="direct-stream-btn" href="#" target="_blank" rel="noreferrer noopener" class="act act-accent" title="Open stream directly if embedded player is blocked" hidden>
+        <span>↗</span> Open Stream
+      </a>
+
+      <!-- Cinema Theater Mode -->
+      <button id="theater-btn" type="button" class="act" title="Toggle theater mode (T)">
+        <span>⛶</span> Theater
+      </button>
+
+      <!-- Fullscreen -->
+      <button id="fullscreen-btn" type="button" class="act" title="Fullscreen (F)">
+        <span>🖥</span> Fullscreen
+      </button>
+
+      <!-- Auto-Disguise on Blur Toggle -->
+      <button id="auto-disguise-btn" type="button" class="act" title="Auto-hide when switching tabs or apps (H)">
+        <span>👁️</span> <span id="auto-disguise-label">Auto-Hide: Off</span>
+      </button>
+
+      <!-- Sleep Timer -->
+      <button id="sleep-btn" type="button" class="act" title="Sleep timer (Z)">
+        <span>🌙</span> <span id="sleep-label">Sleep: Off</span>
+      </button>
+
+      <!-- Back to Archive -->
+      <a href="index.html" class="act" title="Return to vault archive">
+        <span>←</span> Vault
+      </a>
+    </div>
+
+    <!-- Metadata pill -->
+    <div class="meta-deck" id="meta-deck">
+      <span class="title-pill" id="media-title">Studio Stream</span>
+      <span id="res-tag" class="tag" style="color:var(--ok);border-color:var(--ok);font-weight:600;">Max Quality</span>
+      <span class="tag" style="color:var(--veil-strong);border-color:var(--veil-strong);">🛡️ Sandboxed</span>
+      <span class="tag">60 FPS</span>
+      <span class="tag">RAM-Only</span>
+    </div>
+  </div>
+
+  <p class="hint">Shortcuts: <kbd>M</kbd> Mute • <kbd>↑</kbd><kbd>↓</kbd> Volume • <kbd>L</kbd> Lights • <kbd>T</kbd> Theater • <kbd>F</kbd> Fullscreen • <kbd>A</kbd> Aspect • <kbd>P</kbd> Pop-out • <kbd>Z</kbd> Sleep • <kbd>H</kbd> Auto-Hide • <kbd>Esc</kbd> Disguise</p>
+</main>
+
+<!-- Camouflage Decoy Screen -->
+<div id="decoy-view">
+  <div class="decoy-card">
+    <h2 class="decoy-title">
+      <span class="mark" style="width: 14px; height: 14px;"><i></i></span> Notes &amp; Drafts
+    </h2>
+    <p class="decoy-text">
+      Meeting summary and design system migration notes for Q4 release. All components adhere to the tactile ink and paper tokens with zero external tracking scripts.
+    </p>
+    <div style="font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); border: 1px solid var(--rule); padding: 12px; border-radius: 6px; background: var(--raised);">
+      &gt; git checkout main<br>
+      &gt; cargo test --workspace --quiet<br>
+      &gt; tests passed: 48 ok; 0 failed
+    </div>
+    <button id="decoy-exit-btn" type="button" class="act act-strong decoy-exit-btn">Resume session (Esc)</button>
+  </div>
+</div>
+
+<script>
+  // understory player: It's not like I made this hardware player just so your videos wouldn't buffer, b-baka!
+  (() => {
+    const MAGIC_PLAIN = 0x01;
+
+    const playerWrap = document.getElementById('player-wrap');
+    const standbyBox = document.getElementById('standby-box');
+    const videoFrame = document.getElementById('video-frame');
+    const muteBtn = document.getElementById('mute-btn');
+    const muteIcon = document.getElementById('mute-icon');
+    const muteLabel = document.getElementById('mute-label');
+    const muteIndicator = document.getElementById('mute-indicator');
+    const muteIconHud = document.getElementById('mute-icon-hud');
+    const muteTextHud = document.getElementById('mute-text-hud');
+    const directStreamBtn = document.getElementById('direct-stream-btn');
+    const theaterBtn = document.getElementById('theater-btn');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const ambientGlow = document.getElementById('ambient-glow');
+    const lightsBtn = document.getElementById('lights-btn');
+    const lightsLabel = document.getElementById('lights-label');
+    const aspectBtn = document.getElementById('aspect-btn');
+    const aspectLabel = document.getElementById('aspect-label');
+    const pipBtn = document.getElementById('pip-btn');
+    const autoDisguiseBtn = document.getElementById('auto-disguise-btn');
+    const autoDisguiseLabel = document.getElementById('auto-disguise-label');
+    const sleepBtn = document.getElementById('sleep-btn');
+    const sleepLabel = document.getElementById('sleep-label');
+    const panicBtn = document.getElementById('panic-btn');
+    const decoyView = document.getElementById('decoy-view');
+    const decoyExitBtn = document.getElementById('decoy-exit-btn');
+    const mediaTitle = document.getElementById('media-title');
+    const statusLine = document.getElementById('status-line');
+    const themeToggle = document.getElementById('theme-toggle');
+    const localMediaPrompt = document.getElementById('local-media-prompt');
+    const localMediaMsg = document.getElementById('local-media-msg');
+    const localFilePicker = document.getElementById('local-file-picker');
+    const chooseLocalFileBtn = document.getElementById('choose-local-file-btn');
+    const streamServerInput = document.getElementById('stream-server-input');
+    const connectServerBtn = document.getElementById('connect-server-btn');
+
+    let currentItem = null;
+    let isMuted = false;
+    let isPanic = false;
+    let isLightsOff = false;
+    let muteTimer = null;
+
+    function toggleLights(force) {
+      isLightsOff = typeof force === 'boolean' ? force : !isLightsOff;
+      document.body.classList.toggle('lights-off', isLightsOff);
+      if (lightsLabel) lightsLabel.textContent = isLightsOff ? 'Lights: Off' : 'Lights: On';
+      if (lightsBtn) lightsBtn.classList.toggle('act-accent', isLightsOff);
+    }
+
+    if (lightsBtn) lightsBtn.addEventListener('click', () => toggleLights());
+
+    // Theme initialization
+    const savedTheme = localStorage.getItem('understory_theme');
+    if (savedTheme) {
+      document.body.dataset.theme = savedTheme;
+    }
+    themeToggle.addEventListener('click', () => {
+      const current = document.body.dataset.theme;
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.body.dataset.theme = next;
+      localStorage.setItem('understory_theme', next);
+    });
+
+    // ── Web Crypto Decryption ──
+    const b64 = {
+      decode(str) {
+        str = str.replace(/-/g, '+').replace(/_/g, '/');
+        while (str.length % 4) str += '=';
+        const bin = atob(str);
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return bytes;
+      }
+    };
+
+    async function decryptPayload(payloadB64) {
+      const bytes = b64.decode(payloadB64);
+      if (bytes[0] === MAGIC_PLAIN) {
+        const rawKey = bytes.slice(1, 33);
+        const iv = bytes.slice(33, 45);
+        const cipherBytes = bytes.slice(45);
+        const key = await crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['decrypt']);
+        const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipherBytes);
+        return JSON.parse(new TextDecoder().decode(plain));
+      }
+      const plainText = new TextDecoder().decode(bytes);
+      return JSON.parse(plainText);
+    }
+
+    async function initFromUrl() {
+      // Auto-save stream server if passed in query string (e.g. ?server=http://10.10.42.107:8888)
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('server')) {
+          const s = urlParams.get('server');
+          localStorage.setItem('understory_stream_server', s);
+        }
+      } catch (e) {}
+
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#v=')) {
+        try {
+          statusLine.textContent = 'Decrypting in-memory stream...';
+          const rawHash = hash.slice(3);
+          const data = await decryptPayload(rawHash);
+          currentItem = data;
+
+          // Scrub fragment immediately from address bar and history
+          history.replaceState(null, '', window.location.pathname);
+
+          mountStream(data);
+        } catch (err) {
+          console.error('Failed to decrypt payload:', err);
+          statusLine.textContent = 'Could not decrypt stream. Please relaunch from vault.';
+          standbyBox.style.display = 'flex';
+        }
+      } else {
+        standbyBox.style.display = 'flex';
+      }
+    }
+
+    const nativeVideo = document.getElementById('native-video');
+
+    function isDirectVideoUrl(url) {
+      if (!url) return false;
+      const clean = url.split('?')[0].toLowerCase();
+      return clean.endsWith('.mp4') || clean.endsWith('.webm') || clean.endsWith('.m3u8') || clean.endsWith('.mov');
+    }
+
+    function optimizeStreamUrl(url) {
+      try {
+        const u = new URL(url);
+        // Force highest resolution query parameters generically
+        if (u.pathname.startsWith('/embed/')) {
+          u.searchParams.set('autoplay', '1');
+          u.searchParams.set('quality', '1080p');
+          u.searchParams.set('res', '1080');
+        } else {
+          u.searchParams.set('hd', '1');
+          u.searchParams.set('quality', '1080');
+        }
+        return u.toString();
+      } catch (e) {
+        return url;
+      }
+    }
+
+    function enforceMaxQuality() {
+      try {
+        if (videoFrame && videoFrame.contentWindow) {
+          videoFrame.contentWindow.postMessage('{"event":"command","func":"setPlaybackQuality","args":["hd1080"]}', '*');
+          videoFrame.contentWindow.postMessage('{"event":"command","func":"setPlaybackQuality","args":["highres"]}', '*');
+          videoFrame.contentWindow.postMessage('{"method":"setQuality","value":"1080p"}', '*');
+          videoFrame.contentWindow.postMessage('{"method":"setQuality","value":"max"}', '*');
+          videoFrame.contentWindow.postMessage('{"method":"setQuality","value":"highest"}', '*');
+        }
+      } catch (e) {}
+    }
+
+    if (videoFrame) {
+      videoFrame.addEventListener('load', () => {
+        enforceMaxQuality();
+        setTimeout(enforceMaxQuality, 800);
+        setTimeout(enforceMaxQuality, 2000);
+      });
+    }
+
+    function mountStream(item) {
+      if (!item) return;
+      currentItem = item;
+      mediaTitle.textContent = item.title || 'Studio Stream';
+      const metaParts = [
+        item.franchiseName || item.franchise,
+        item.creator ? `🎨 ${item.creator}` : null,
+        item.poses && item.poses.length ? `💃 ${item.poses.join(', ')}` : null,
+        item.outfit ? `👗 ${item.outfit}` : null,
+        item.duration && item.duration !== 'Full Length' ? `⏱ ${item.duration}` : null
+      ].filter(Boolean);
+      statusLine.textContent = `${metaParts.join(' • ')} • Encrypted zero-trace stream`;
+      document.title = `${item.title || 'Stream'} • understory`;
+
+      let rawUrl = item.embedUrl || item.directUrl;
+      if (!rawUrl) return;
+
+      // When served by the phone relay (any host other than GitHub Pages), local
+      // file:// sources map to the relay's same-origin /media/ path (HTTPS via tunnel).
+      const onRelay = location.protocol.startsWith('http') && !location.hostname.endsWith('github.io');
+      if (onRelay && rawUrl.startsWith('file://')) {
+        const filename = rawUrl.split('/').pop();
+        rawUrl = new URL('media/' + encodeURIComponent(filename), location.href).toString();
+      } else {
+        const streamServer = localStorage.getItem('understory_stream_server');
+        if (streamServer && rawUrl.startsWith('file://')) {
+          const filename = rawUrl.split('/').pop();
+          rawUrl = streamServer.replace(/\/$/, '') + '/' + filename;
+        }
+      }
+
+      standbyBox.style.display = 'none';
+
+      if (isDirectVideoUrl(rawUrl)) {
+        // Native HTML5 Player: Full direct 1080p/4K, zero ads, zero redirects
+        videoFrame.style.display = 'none';
+        videoFrame.src = 'about:blank';
+        nativeVideo.style.display = 'block';
+
+        const isLocalFile = rawUrl.startsWith('file://');
+        const filename = decodeURIComponent(rawUrl.split('/').pop());
+
+        if (isLocalFile && location.protocol === 'https:') {
+          if (localMediaPrompt && localMediaMsg) {
+            localMediaMsg.textContent = `📁 Stored on Mac's Disk: ${filename}`;
+            localMediaPrompt.style.display = 'flex';
+            if (streamServerInput && !streamServerInput.value) {
+              streamServerInput.value = 'http://10.10.42.107:8888';
+            }
+          }
+        } else {
+          if (localMediaPrompt) localMediaPrompt.style.display = 'none';
+          nativeVideo.src = rawUrl;
+          nativeVideo.muted = isMuted;
+          nativeVideo.volume = currentVolume / 100;
+          nativeVideo.play().catch(() => {});
+
+          nativeVideo.onerror = () => {
+            if (localMediaPrompt && localMediaMsg) {
+              localMediaMsg.textContent = `📁 Stored on Mac's Disk: ${filename}`;
+              localMediaPrompt.style.display = 'flex';
+              if (streamServerInput && !streamServerInput.value) {
+                streamServerInput.value = 'http://10.10.42.107:8888';
+              }
+            }
+          };
+        }
+      } else {
+        // Sandboxed Embedded Player: Strict sandbox blocks all click redirects and popups
+        if (nativeVideo) {
+          nativeVideo.style.display = 'none';
+          nativeVideo.pause();
+          nativeVideo.src = '';
+        }
+        videoFrame.style.display = 'block';
+        videoFrame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-presentation');
+        videoFrame.setAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+        videoFrame.src = optimizeStreamUrl(rawUrl);
+      }
+
+      if (ambientGlow) ambientGlow.classList.add('active');
+
+      if (directStreamBtn) {
+        directStreamBtn.href = item.directUrl || rawUrl;
+        directStreamBtn.hidden = false;
+      }
+    }
+
+    // ── MUTE / UNMUTE LOGIC ──
+    function setMute(muted) {
+      isMuted = muted;
+
+      if (isMuted) {
+        muteBtn.className = 'act act-muted';
+        muteIcon.textContent = '🔇';
+        muteLabel.textContent = 'Muted';
+        muteIconHud.textContent = '🔇';
+        muteTextHud.textContent = 'Muted';
+      } else {
+        muteBtn.className = 'act act-strong';
+        muteIcon.textContent = '🔊';
+        muteLabel.textContent = 'Sound On';
+        muteIconHud.textContent = '🔊';
+        muteTextHud.textContent = 'Sound On';
+      }
+
+      // Flash HUD indicator
+      muteIndicator.classList.add('visible');
+      if (muteTimer) clearTimeout(muteTimer);
+      muteTimer = setTimeout(() => muteIndicator.classList.remove('visible'), 1600);
+
+      if (nativeVideo && nativeVideo.style.display !== 'none') {
+        nativeVideo.muted = isMuted;
+      }
+
+      // Send mute commands to iframe players
+      try {
+        if (videoFrame && videoFrame.contentWindow) {
+          if (isMuted) {
+            videoFrame.contentWindow.postMessage('{"event":"command","func":"mute"}', '*');
+            videoFrame.contentWindow.postMessage('{"method":"mute"}', '*');
+          } else {
+            videoFrame.contentWindow.postMessage('{"event":"command","func":"unMute"}', '*');
+            videoFrame.contentWindow.postMessage('{"method":"unmute"}', '*');
+          }
+        }
+      } catch (e) {}
+    }
+
+    muteBtn.addEventListener('click', () => setMute(!isMuted));
+
+    // Theater Mode
+    theaterBtn.addEventListener('click', () => {
+      playerWrap.classList.toggle('theater');
+    });
+
+    // Fullscreen Mode
+    fullscreenBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        playerWrap.requestFullscreen().catch(() => {});
+      } else {
+        document.exitFullscreen().catch(() => {});
+      }
+    });
+
+    // Aspect Ratio Switcher
+    const ratios = ['16:9', '21:9', 'Fit'];
+    let currentRatioIdx = 0;
+
+    function setAspectRatio(ratio) {
+      playerWrap.classList.remove('ratio-21-9', 'ratio-fit');
+      if (ratio === '21:9') {
+        playerWrap.classList.add('ratio-21-9');
+      } else if (ratio === 'Fit') {
+        playerWrap.classList.add('ratio-fit');
+      }
+      if (aspectLabel) aspectLabel.textContent = ratio;
+    }
+
+    function cycleAspectRatio() {
+      currentRatioIdx = (currentRatioIdx + 1) % ratios.length;
+      setAspectRatio(ratios[currentRatioIdx]);
+    }
+
+    if (aspectBtn) aspectBtn.addEventListener('click', cycleAspectRatio);
+
+    // Picture-in-Picture / Pop-out Window
+    function openPopOut() {
+      if (!currentItem) return;
+      const url = currentItem.embedUrl || currentItem.directUrl;
+      if (!url) return;
+      const w = 960;
+      const h = 540;
+      const left = Math.max(0, Math.floor((screen.width - w) / 2));
+      const top = Math.max(0, Math.floor((screen.height - h) / 2));
+      window.open(url, 'understory_cinema_popout', `width=${w},height=${h},left=${left},top=${top},status=no,menubar=no,toolbar=no`);
+    }
+
+    if (pipBtn) pipBtn.addEventListener('click', openPopOut);
+
+    // Auto-Disguise on Tab Blur
+    let autoDisguiseEnabled = localStorage.getItem('understory_autodisguise') === 'true';
+
+    function updateAutoDisguiseUI() {
+      if (autoDisguiseLabel) autoDisguiseLabel.textContent = autoDisguiseEnabled ? 'Auto-Hide: On' : 'Auto-Hide: Off';
+      if (autoDisguiseBtn) autoDisguiseBtn.classList.toggle('act-strong', autoDisguiseEnabled);
+    }
+
+    function toggleAutoDisguise() {
+      autoDisguiseEnabled = !autoDisguiseEnabled;
+      localStorage.setItem('understory_autodisguise', autoDisguiseEnabled);
+      updateAutoDisguiseUI();
+    }
+
+    if (autoDisguiseBtn) autoDisguiseBtn.addEventListener('click', toggleAutoDisguise);
+    updateAutoDisguiseUI();
+
+    window.addEventListener('blur', () => {
+      if (autoDisguiseEnabled && !isPanic && videoFrame.style.display !== 'none') {
+        togglePanic(true);
+      }
+    });
+
+    // Volume Adjustment
+    let currentVolume = 100;
+    function adjustVolume(delta) {
+      currentVolume = Math.max(0, Math.min(100, currentVolume + delta));
+      if (currentVolume === 0) {
+        setMute(true);
+      } else if (isMuted) {
+        setMute(false);
+      }
+      muteIconHud.textContent = currentVolume > 50 ? '🔊' : (currentVolume > 0 ? '🔉' : '🔇');
+      muteTextHud.textContent = `${currentVolume}%`;
+      muteIndicator.classList.add('visible');
+      if (muteTimer) clearTimeout(muteTimer);
+      muteTimer = setTimeout(() => muteIndicator.classList.remove('visible'), 1600);
+
+      if (nativeVideo && nativeVideo.style.display !== 'none') {
+        nativeVideo.volume = currentVolume / 100;
+        nativeVideo.muted = isMuted;
+      }
+
+      try {
+        if (videoFrame && videoFrame.contentWindow) {
+          videoFrame.contentWindow.postMessage(`{"event":"command","func":"setVolume","args":[${currentVolume}]}`, '*');
+          videoFrame.contentWindow.postMessage(`{"method":"setVolume","value":${currentVolume / 100}}`, '*');
+        }
+      } catch (e) {}
+    }
+
+    // Sleep Timer
+    const sleepDurations = [0, 15, 30, 45, 60]; // in minutes
+    let sleepIdx = 0;
+    let sleepInterval = null;
+    let sleepSecondsRemaining = 0;
+
+    function updateSleepUI() {
+      if (!sleepLabel) return;
+      if (sleepSecondsRemaining > 0) {
+        const m = Math.floor(sleepSecondsRemaining / 60);
+        const s = sleepSecondsRemaining % 60;
+        sleepLabel.textContent = `Sleep: ${m}:${String(s).padStart(2, '0')}`;
+        sleepBtn.classList.add('act-accent');
+      } else {
+        sleepLabel.textContent = 'Sleep: Off';
+        sleepBtn.classList.remove('act-accent');
+      }
+    }
+
+    function cycleSleepTimer() {
+      sleepIdx = (sleepIdx + 1) % sleepDurations.length;
+      const mins = sleepDurations[sleepIdx];
+      if (sleepInterval) clearInterval(sleepInterval);
+      if (mins === 0) {
+        sleepSecondsRemaining = 0;
+        updateSleepUI();
+      } else {
+        sleepSecondsRemaining = mins * 60;
+        updateSleepUI();
+        sleepInterval = setInterval(() => {
+          sleepSecondsRemaining--;
+          updateSleepUI();
+          if (sleepSecondsRemaining <= 0) {
+            clearInterval(sleepInterval);
+            sleepInterval = null;
+            togglePanic(true);
+          }
+        }, 1000);
+      }
+    }
+
+    if (sleepBtn) sleepBtn.addEventListener('click', cycleSleepTimer);
+
+    // Panic Disguise Mode
+    function togglePanic(forceState) {
+      isPanic = typeof forceState === 'boolean' ? forceState : !isPanic;
+      if (isPanic) {
+        decoyView.classList.add('active');
+        if (ambientGlow) ambientGlow.classList.remove('active');
+        document.title = 'Notes & Drafts';
+        if (nativeVideo && nativeVideo.style.display !== 'none') {
+          nativeVideo.pause();
+          nativeVideo.dataset.tempSrc = nativeVideo.src;
+          nativeVideo.src = '';
+        }
+        if (videoFrame.src) {
+          videoFrame.dataset.tempSrc = videoFrame.src;
+          videoFrame.src = 'about:blank';
+        }
+      } else {
+        decoyView.classList.remove('active');
+        if (ambientGlow && currentItem) ambientGlow.classList.add('active');
+        document.title = (currentItem && currentItem.title) ? `${currentItem.title} • understory` : 'understory • player';
+        if (nativeVideo && nativeVideo.dataset.tempSrc) {
+          nativeVideo.src = nativeVideo.dataset.tempSrc;
+          nativeVideo.play().catch(() => {});
+        }
+        if (videoFrame.dataset.tempSrc) {
+          videoFrame.src = videoFrame.dataset.tempSrc;
+        }
+      }
+    }
+
+    panicBtn.addEventListener('click', () => togglePanic(true));
+    decoyExitBtn.addEventListener('click', () => togglePanic(false));
+
+    // Keyboard Shortcuts
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'Escape') {
+        togglePanic();
+      } else if (e.key === 'm' || e.key === 'M') {
+        setMute(!isMuted);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        adjustVolume(10);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        adjustVolume(-10);
+      } else if (e.key === 'l' || e.key === 'L') {
+        toggleLights();
+      } else if (e.key === 't' || e.key === 'T') {
+        playerWrap.classList.toggle('theater');
+      } else if (e.key === 'f' || e.key === 'F') {
+        if (!document.fullscreenElement) playerWrap.requestFullscreen().catch(() => {});
+        else document.exitFullscreen().catch(() => {});
+      } else if (e.key === 'a' || e.key === 'A') {
+        cycleAspectRatio();
+      } else if (e.key === 'p' || e.key === 'P') {
+        openPopOut();
+      } else if (e.key === 'z' || e.key === 'Z') {
+        cycleSleepTimer();
+      } else if (e.key === 'h' || e.key === 'H') {
+        toggleAutoDisguise();
+      }
+    });
+
+    // Live playback readout: confirms the real decoded resolution (4K = 3840x2160),
+    // how much is buffered ahead, and any dropped frames.
+    function updatePlaybackReadout() {
+      if (!nativeVideo || nativeVideo.style.display === 'none' || !nativeVideo.videoWidth) return;
+      let ahead = 0;
+      try {
+        const b = nativeVideo.buffered;
+        for (let i = 0; i < b.length; i++) {
+          if (nativeVideo.currentTime >= b.start(i) && nativeVideo.currentTime <= b.end(i)) {
+            ahead = Math.max(0, b.end(i) - nativeVideo.currentTime);
+          }
+        }
+      } catch (e) {}
+      const q = nativeVideo.getVideoPlaybackQuality ? nativeVideo.getVideoPlaybackQuality() : null;
+      const w = nativeVideo.videoWidth, h = nativeVideo.videoHeight;
+      const tag = h >= 2160 ? '4K' : (h >= 1440 ? '1440p' : (h >= 1080 ? '1080p' : h + 'p'));
+      const rt = document.getElementById('res-tag'); if (rt) rt.textContent = tag;
+      statusLine.textContent = `${tag} ${w}×${h} • buffered ${ahead.toFixed(0)}s` +
+        (q && q.droppedVideoFrames ? ` • dropped ${q.droppedVideoFrames}` : '');
+    }
+    if (nativeVideo) {
+      nativeVideo.addEventListener('loadedmetadata', updatePlaybackReadout);
+      nativeVideo.addEventListener('resize', updatePlaybackReadout);
+      setInterval(updatePlaybackReadout, 3000);
+    }
+
+    // Phone Stream Relay Connect
+    if (connectServerBtn && streamServerInput) {
+      const saved = localStorage.getItem('understory_stream_server');
+      if (saved) streamServerInput.value = saved;
+
+      connectServerBtn.addEventListener('click', () => {
+        const val = streamServerInput.value.trim();
+        if (val) {
+          localStorage.setItem('understory_stream_server', val);
+          if (currentItem) mountStream(currentItem);
+        }
+      });
+      streamServerInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') connectServerBtn.click();
+      });
+    }
+
+    // Local Media Picker and Drag & Drop
+    if (chooseLocalFileBtn && localFilePicker) {
+      chooseLocalFileBtn.addEventListener('click', () => localFilePicker.click());
+      localFilePicker.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          const blobUrl = URL.createObjectURL(e.target.files[0]);
+          videoFrame.style.display = 'none';
+          nativeVideo.style.display = 'block';
+          nativeVideo.src = blobUrl;
+          nativeVideo.play().catch(() => {});
+          if (localMediaPrompt) localMediaPrompt.style.display = 'none';
+        }
+      });
+    }
+
+    if (playerWrap) {
+      playerWrap.addEventListener('dragover', (e) => e.preventDefault());
+      playerWrap.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          const blobUrl = URL.createObjectURL(e.dataTransfer.files[0]);
+          videoFrame.style.display = 'none';
+          nativeVideo.style.display = 'block';
+          nativeVideo.src = blobUrl;
+          nativeVideo.play().catch(() => {});
+          if (localMediaPrompt) localMediaPrompt.style.display = 'none';
+        }
+      });
+    }
+
+    // Initialize
+    initFromUrl();
+  })();
+</script>
+</body>
+</html>
