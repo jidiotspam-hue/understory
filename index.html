@@ -87,6 +87,23 @@
           <button id="clear-search" class="clear-btn" hidden aria-label="Clear search">×</button>
         </div>
 
+        <!-- Dedicated Model / Actor Filter & Quick Bar -->
+        <div class="actor-filter-section" id="actor-filter-section">
+          <div class="actor-filter-bar-header">
+            <div class="actor-select-wrapper">
+              <label for="actor-filter-select" class="actor-filter-title">
+                <span class="actor-icon">👤</span> <strong>Filter by Model / Performer:</strong>
+              </label>
+              <select id="actor-filter-select" class="actor-filter-select" aria-label="Filter by model or actor">
+                <option value="all">All Models &amp; Performers</option>
+              </select>
+              <button id="clear-actor-btn" class="act act-clear-actor" hidden title="Clear actor filter">Clear ✕</button>
+            </div>
+            <span class="actor-active-indicator" id="actor-active-indicator" hidden></span>
+          </div>
+          <div class="actor-chips-container" id="actor-chips-container"></div>
+        </div>
+
         <!-- Populated dynamically in memory upon vault unlock -->
         <div class="character-quick-bar" id="character-quick-bar"></div>
         <nav class="filter-bar" id="filter-bar" aria-label="Filter by collection"></nav>
@@ -175,7 +192,7 @@
           <span class="detail-val" id="modal-creator"></span>
         </div>
         <div class="detail-row">
-          <span class="detail-label">Characters</span>
+          <span class="detail-label">Model / Cast</span>
           <span class="detail-val" id="modal-characters"></span>
         </div>
         <div class="detail-row">

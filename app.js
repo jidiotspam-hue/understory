@@ -9,11 +9,68 @@
   let VIDEO_DATA = [];
   let activeFilter = 'all';
   let activeTypeFilter = 'all';
+  let activeActorFilter = 'all';
   let activeGroupMode = 'type'; // 'type' | 'franchise' | 'none'
   let searchQuery = '';
   let selectedVideo = null;
   let sortMode = 'default';
   let favorites = [];
+
+  const STUDIO_NAMES_SET = new Set([
+    'cum swapping', 'stepdad', 'petite hd', "she's in my bed", 'moms teach sex',
+    "she's breeding material", 'stepsiblings caught', 'stepsisters', 'sharing sis',
+    'nubiles network', 'nubiles unscripted', 'school uniform', 'casual / loungewear',
+    'cosplay costume', 'challenge series', 'curated performer', 'understory curated',
+    'anime studio', '3d sfm / blender studio', 'sfm studio', 'paradehentai',
+    'thehentaidesire', 'animeanimph', 'dub4funhub', 'mosthentaifan', 'cumhub787',
+    'letsdoeit', 'greedyneko', 'mypovgirlfriend', 'yuunayunohana', 'peh-koi',
+    'manuel duartem', 'redmoa / sfm studio', '26region / sfm studio', 'h3dc',
+    'wraith931', 'trafficfactory', 'hentaivalley', 'hentaigames4u', 'my sweet apple',
+    'avazev'
+  ]);
+
+  function getVideoActors(item) {
+    if (!item) return [];
+    if (Array.isArray(item.models) && item.models.length) {
+      return item.models;
+    }
+    const actors = [];
+    const m = item.title && item.title.match(/\(feat\.?\s*([^)]+)\)/i);
+    if (m) {
+      m[1].split(/\s*(?:&|and|,)\s*/i).forEach((p) => {
+        const clean = p.trim();
+        if (clean && !STUDIO_NAMES_SET.has(clean.toLowerCase())) actors.push(clean);
+      });
+    }
+    if (Array.isArray(item.characters)) {
+      item.characters.forEach((c) => {
+        const clean = c.trim();
+        if (clean && !STUDIO_NAMES_SET.has(clean.toLowerCase()) && !clean.includes('(4K Master)')) {
+          actors.push(clean);
+        }
+      });
+    }
+    if (item.creator && !STUDIO_NAMES_SET.has(item.creator.toLowerCase()) && !item.creator.includes('(4K Master)') && !item.creator.includes('Studio')) {
+      actors.push(item.creator.trim());
+    }
+
+    const unique = [];
+    actors.forEach((a) => {
+      let norm = a.replace(/\s*\(YoRHa.*\)/, '');
+      if (!unique.some((u) => u.toLowerCase() === norm.toLowerCase())) {
+        unique.push(norm);
+      }
+    });
+
+    if (unique.length === 0) {
+      if (item.id && item.id.startsWith('s')) {
+        unique.push('Nubiles Cast');
+      } else {
+        unique.push('Curated Performer');
+      }
+    }
+    return unique;
+  }
   try {
     // Fine, I'll remember your favorite items, but don't expect me to look at them!
     favorites = JSON.parse(localStorage.getItem('understory_favorites') || '[]');
@@ -213,6 +270,7 @@
 
   function lockVault() {
     VIDEO_DATA = [];
+    activeActorFilter = 'all';
     sessionStorage.removeItem('understory_session_pass');
     stopRelayWatch();
     stopSessionTimer();
@@ -221,6 +279,14 @@
     if (fb) fb.innerHTML = '';
     const tfb = document.getElementById('type-filter-bar');
     if (tfb) tfb.innerHTML = '';
+    const as = document.getElementById('actor-filter-select');
+    if (as) as.innerHTML = '<option value="all">All Models &amp; Performers</option>';
+    const ac = document.getElementById('actor-chips-container');
+    if (ac) ac.innerHTML = '';
+    const ai = document.getElementById('actor-active-indicator');
+    if (ai) ai.hidden = true;
+    const clrAct = document.getElementById('clear-actor-btn');
+    if (clrAct) clrAct.hidden = true;
     if (cardsContainer) cardsContainer.innerHTML = '';
     vaultUnlockedView.hidden = true;
     vaultLockedView.hidden = false;
@@ -398,6 +464,97 @@
         });
       });
     }
+
+    // 4. Build Model / Actor Filter Dropdown and Quick Chips dynamically from VIDEO_DATA
+    const actorSelect = document.getElementById('actor-filter-select');
+    const actorChipsCont = document.getElementById('actor-chips-container');
+    const clearActorBtn = document.getElementById('clear-actor-btn');
+
+    if (actorSelect || actorChipsCont) {
+      const actorCounts = new Map();
+      VIDEO_DATA.forEach((v) => {
+        const acts = getVideoActors(v);
+        acts.forEach((a) => {
+          actorCounts.set(a, (actorCounts.get(a) || 0) + 1);
+        });
+      });
+
+      if (actorSelect) {
+        let optHtml = `<option value="all">All Models &amp; Performers (${VIDEO_DATA.length})</option>`;
+        const sortedActors = Array.from(actorCounts.keys()).sort((a, b) => a.localeCompare(b));
+        sortedActors.forEach((act) => {
+          const cnt = actorCounts.get(act);
+          optHtml += `<option value="${act}">${act} (${cnt})</option>`;
+        });
+        actorSelect.innerHTML = optHtml;
+        actorSelect.value = activeActorFilter;
+        actorSelect.onchange = (e) => {
+          setActorFilter(e.target.value);
+        };
+      }
+
+      if (clearActorBtn) {
+        clearActorBtn.onclick = () => {
+          setActorFilter('all');
+        };
+      }
+
+      if (actorChipsCont) {
+        // Show top 16 performers with highest video count
+        const topPerformers = Array.from(actorCounts.entries())
+          .filter(([name]) => name !== 'Curated Performer')
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 16);
+
+        let chipHtml = `<button class="actor-chip ${activeActorFilter === 'all' ? 'active' : ''}" data-actor="all">All (${VIDEO_DATA.length})</button>`;
+        topPerformers.forEach(([act, cnt]) => {
+          chipHtml += `<button class="actor-chip ${activeActorFilter === act ? 'active' : ''}" data-actor="${act}"><span>👤</span> ${act} <span style="opacity:0.75;font-size:10px;">(${cnt})</span></button>`;
+        });
+        actorChipsCont.innerHTML = chipHtml;
+        actorChipsCont.querySelectorAll('.actor-chip').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const act = btn.getAttribute('data-actor');
+            if (activeActorFilter === act && act !== 'all') {
+              setActorFilter('all');
+            } else {
+              setActorFilter(act);
+            }
+          });
+        });
+      }
+    }
+  }
+
+  function setActorFilter(actorName) {
+    activeActorFilter = actorName;
+    updateActorFilterUI();
+    render();
+    if (actorName !== 'all') {
+      showToast(`Filtered by actor: ${actorName} 👤`);
+    } else {
+      showToast('Cleared actor filter');
+    }
+  }
+
+  function updateActorFilterUI() {
+    const actorSelect = document.getElementById('actor-filter-select');
+    if (actorSelect) actorSelect.value = activeActorFilter;
+    const clearActorBtn = document.getElementById('clear-actor-btn');
+    if (clearActorBtn) clearActorBtn.hidden = (activeActorFilter === 'all');
+    const indicator = document.getElementById('actor-active-indicator');
+    if (indicator) {
+      if (activeActorFilter !== 'all') {
+        indicator.hidden = false;
+        indicator.textContent = `Filtered: ${activeActorFilter}`;
+      } else {
+        indicator.hidden = true;
+      }
+    }
+    const chips = document.querySelectorAll('#actor-chips-container .actor-chip');
+    chips.forEach((chip) => {
+      const act = chip.getAttribute('data-actor');
+      chip.classList.toggle('active', act.toLowerCase() === activeActorFilter.toLowerCase());
+    });
   }
 
   function updateFilterCounts() {
@@ -461,6 +618,14 @@
         activeTypeFilter === 'all' || v.type === activeTypeFilter;
       if (!matchesType) return false;
 
+      // Filter by Actor / Model
+      if (activeActorFilter !== 'all') {
+        const actors = getVideoActors(v);
+        if (!actors.some((a) => a.toLowerCase() === activeActorFilter.toLowerCase())) {
+          return false;
+        }
+      }
+
       if (!searchQuery) return true;
 
       const words = searchQuery.toLowerCase().split(/\s+/).filter(Boolean);
@@ -478,6 +643,7 @@
         v.userTag,
         ...(v.poses || []),
         ...v.characters,
+        ...getVideoActors(v),
         ...v.badges
       ].join(' ').toLowerCase();
 
@@ -616,6 +782,13 @@
 
   function renderCardHtml(item) {
     const isFav = favorites.includes(item.id);
+    const actors = getVideoActors(item);
+    const primaryActor = actors[0] || 'Performer';
+    const modelsHtml = actors.map((act) => {
+      const isStudioCast = act === 'Nubiles Cast' || act === 'Curated Performer';
+      return `<button type="button" class="card-actor-pill ${isStudioCast ? 'pill-studio' : ''}" data-actor="${act}" title="Filter archive by actor: ${act}"><span>👤</span> ${act}</button>`;
+    }).join(' ');
+
     const badgesHtml = item.badges
       .map((b) => {
         let cls = 'badge';
@@ -647,9 +820,15 @@
           </div>
         </div>
         <h2 class="card-title">${item.title}</h2>
+        <div class="card-actor-row">
+          <span class="card-actor-label">👤 <strong>Model:</strong></span>
+          <div class="card-actor-tags">
+            ${modelsHtml}
+          </div>
+        </div>
         <p class="card-meta">
-          <strong>${item.characters.join(', ')}</strong>
-          ${item.creator ? ` • <span class="badge badge-studio" data-filter-term="${item.creator}" style="cursor:pointer;font-size:11px;padding:2px 7px;" title="Click to filter by creator: ${item.creator}">🎨 ${item.creator}</span>` : ''}
+          ${item.creator ? `<span class="badge badge-studio" data-filter-term="${item.creator}" style="cursor:pointer;font-size:11px;padding:2px 7px;" title="Click to filter by creator: ${item.creator}">🎨 ${item.creator}</span>` : ''}
+          ${item.franchiseName ? ` • <span style="font-size:12px;color:var(--muted);">${item.franchiseName}</span>` : ''}
         </p>
         <div class="card-meta" style="margin-top:4px;font-size:12px;line-height:1.5;color:var(--muted);">
           ${posesHtml ? `<div style="margin-bottom:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;"><strong style="color:var(--ink);font-size:11px;">Poses:</strong> ${posesHtml}</div>` : ''}
@@ -683,6 +862,7 @@
         </button>
         <div class="card-sub-acts">
           <button class="act" data-action="details" data-id="${item.id}">Details &amp; Keys</button>
+          <button class="act act-filter-actor" data-actor="${primaryActor}" title="Filter library by actor: ${primaryActor}">Find Actor 👤</button>
           <a href="${item.cloakUrl}" target="_blank" rel="noreferrer noopener" class="act act-accent" title="Open 2-Layer Cloak decryptor">Cloak ↗</a>
         </div>
       </div>
@@ -719,7 +899,9 @@
           clearSearchBtn.hidden = true;
           activeFilter = 'all';
           activeTypeFilter = 'all';
+          activeActorFilter = 'all';
           updateFilterChipUI();
+          updateActorFilterUI();
           render();
         });
       }
@@ -866,6 +1048,17 @@
       });
     });
 
+    // Clickable Actor pills and "Find Actor" buttons on cards
+    cardsContainer.querySelectorAll('.card-actor-pill, .act-filter-actor').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const actor = btn.getAttribute('data-actor');
+        if (actor) {
+          setActorFilter(actor);
+        }
+      });
+    });
+
     // Clickable creator / pose / metadata filter badges on cards
     cardsContainer.querySelectorAll('[data-filter-term]').forEach((el) => {
       el.addEventListener('click', (e) => {
@@ -890,7 +1083,7 @@
 
     modalVideoTitle.textContent = item.title;
     modalFranchise.textContent = item.franchiseName;
-    modalCharacters.textContent = item.characters.join(', ');
+    modalCharacters.textContent = (getVideoActors(item) || item.characters).join(', ');
 
     const modalCreator = document.getElementById('modal-creator');
     if (modalCreator) modalCreator.textContent = item.creator || 'Curated Studio';
