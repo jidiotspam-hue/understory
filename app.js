@@ -525,6 +525,19 @@
   }
 
   async function fetchRelayBlob() {
+    // 1. Try GitHub Contents API first (real-time commit state, bypasses 5-10m Fastly/CDN caches)
+    try {
+      const apiRes = await fetch('https://api.github.com/repos/jidiotspam-hue/understory/contents/relay.json', { cache: 'no-store' });
+      if (apiRes.ok) {
+        const apiData = await apiRes.json();
+        if (apiData && apiData.content) {
+          const rawText = atob(apiData.content.replace(/\s/g, ''));
+          const json = JSON.parse(rawText);
+          if (json && json.relay) return json.relay;
+        }
+      }
+    } catch (e) { /* fallback to CDN paths */ }
+
     const bust = `?t=${Date.now()}`;
     for (const url of [RELAY_RAW + bust, 'relay.json' + bust]) {
       try {
@@ -553,8 +566,18 @@
           const ctrl = new AbortController();
           const t = setTimeout(() => ctrl.abort(), 10000);
           try {
-            const res = await fetch(info.url + 'ping', { cache: 'no-store', signal: ctrl.signal });
-            if (res.ok) { next = info.url; relayWhy = ''; }
+            let alive = false;
+            try {
+              const res = await fetch(info.url + 'ping', { signal: ctrl.signal });
+              if (res.ok) alive = true;
+            } catch (err1) {
+              // Fallback to no-cors probe to bypass browser extension / strict CORS restrictions
+              try {
+                const noCorsRes = await fetch(info.url + 'ping', { mode: 'no-cors', signal: ctrl.signal });
+                if (noCorsRes) alive = true;
+              } catch (err2) {}
+            }
+            if (alive) { next = info.url; relayWhy = ''; }
           } finally {
             clearTimeout(t);
           }
