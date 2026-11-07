@@ -322,23 +322,13 @@
   const phoneRelayBtn = document.getElementById('phone-relay-btn');
   if (phoneRelayBtn) {
     phoneRelayBtn.addEventListener('click', () => {
-      let cachedLan = null;
-      try { cachedLan = localStorage.getItem('understory_cached_lan'); } catch (e) {}
       if (relayBase) {
-        if (cachedLan && onGithubPages) {
-          const switchLan = confirm('⚡ High-Speed Local Wi-Fi relay detected!\n\nSwitch to ultra-fast 1GB/s local relay for zero-buffer 4K playback?');
-          if (switchLan) {
-            const pass = sessionStorage.getItem('understory_session_pass') || '';
-            window.location.replace(cachedLan + (pass ? '#pass=' + encodeURIComponent(pass) : ''));
-            return;
-          }
-        }
-        showToast('Relay online. Disk videos open via Mac relay.', 3500);
+        showToast('⚡ Relay Online: End-to-end encrypted 4K stream ready.', 3500);
       } else if (onGithubPages) {
         showToast('Relay offline: ' + (relayWhy || 'checking…') + '. Rechecking now.', 7000);
         resolveRelay();
       } else {
-        showToast('Connected directly to ultra-fast local relay (1GB/s).', 3000);
+        showToast('Connected directly to relay.', 3000);
       }
     });
   }
@@ -758,28 +748,9 @@
             clearTimeout(t);
           }
         }
-
-        // Auto-detect home Wi-Fi and redirect to 1GB/s local relay for zero-buffer 4K playback
-        if (info && info.lanUrl && onGithubPages) {
-          try {
-            localStorage.setItem('understory_cached_lan', info.lanUrl);
-          } catch (e) {}
-
-          const lanProbe = new Image();
-          let redirected = false;
-          lanProbe.onload = () => {
-            if (redirected) return;
-            redirected = true;
-            showToast('⚡ Home Wi-Fi detected! Auto-redirecting to 1GB/s local relay...');
-            setTimeout(() => {
-              window.location.replace(info.lanUrl + '#pass=' + encodeURIComponent(pass));
-            }, 500);
-          };
-          lanProbe.src = info.lanUrl + 'ping.gif?t=' + Date.now();
-          setTimeout(() => { if (!redirected) lanProbe.src = ''; }, 1000);
-        }
       }
     } catch (e) { next = null; }
+    try { localStorage.removeItem('understory_cached_lan'); } catch (e) {}
     relayBase = next;
     setRelayUI(next ? 'online' : 'offline');
     if (before !== next && VIDEO_DATA.length) {
@@ -1342,23 +1313,7 @@
   });
 
   // ── Boot / Initialization ──
-  // ── Instant Home Network Pre-Check & Auto-Redirect ──
-  try {
-    const cachedLan = localStorage.getItem('understory_cached_lan');
-    if (onGithubPages && cachedLan) {
-      const probe = new Image();
-      let done = false;
-      probe.onload = () => {
-        if (done) return;
-        done = true;
-        const currentPass = sessionStorage.getItem('understory_session_pass');
-        const target = cachedLan + (currentPass ? '#pass=' + encodeURIComponent(currentPass) : '');
-        window.location.replace(target);
-      };
-      probe.src = cachedLan + 'ping.gif?t=' + Date.now();
-      setTimeout(() => { if (!done) probe.src = ''; }, 750);
-    }
-  } catch (e) {}
+  try { localStorage.removeItem('understory_cached_lan'); } catch (e) {}
 
   // Check for #pass= in URL or existing session
   const hashMatch = location.hash.match(/pass=([^&]+)/);
