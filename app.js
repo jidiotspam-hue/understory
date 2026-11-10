@@ -662,11 +662,11 @@
         return 0;
       });
     } else if (sortMode === 'creator') {
-      list.sort((a, b) => (a.creator || '').localeCompare(b.creator || '') || a.title.localeCompare(b.title));
+      list.sort((a, b) => (a.creator || '').localeCompare(b.creator || '') || ((a.seriesOrder || 9999) - (b.seriesOrder || 9999)) || a.title.localeCompare(b.title));
     } else if (sortMode === 'title-asc') {
       list.sort((a, b) => a.title.localeCompare(b.title));
     } else if (sortMode === 'franchise') {
-      list.sort((a, b) => a.franchiseName.localeCompare(b.franchiseName) || a.title.localeCompare(b.title));
+      list.sort((a, b) => a.franchiseName.localeCompare(b.franchiseName) || ((a.seriesOrder || 9999) - (b.seriesOrder || 9999)) || a.title.localeCompare(b.title));
     }
 
     return list;
